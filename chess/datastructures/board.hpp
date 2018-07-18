@@ -77,16 +77,6 @@ class board {
    * @param to_x
    * @param to_y
    */
-
-  /**
-   * Removes whatever piece is found on coordinates from the board.
-   * Does not perform any check if the move is allowed, except:
-   * If there is no piece at the coordinates, this method will throw an error.
-   * @param from_x
-   * @param from_y
-   * @param to_x
-   * @param to_y
-   */
   void removePiece(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
 
   /**
