@@ -48,6 +48,7 @@ class board {
    * Does not perform any check if the move is allowed, except:
    * If there is no piece p at from_coordinates, this method will throw an error.
    * If there is already an piece at to_coordinates, this method might throw an error.
+   * @param p
    * @param from_x
    * @param from_y
    * @param to_x
@@ -61,8 +62,10 @@ class board {
    * If there is no piece p_from at from_coordinates, this method will throw an error.
    * If there is no piece p_to at to_coordinates, this method will throw an error.
    * If there is already an piece other than p_to at to_coordinates, this method might throw an error.
+   * @param p_from
    * @param from_x
    * @param from_y
+   * @param p_to
    * @param to_x
    * @param to_y
    */
@@ -70,25 +73,22 @@ class board {
 
   /**
    * Removes whatever piece is found on coordinates from the board.
-   * Does not perform any check if the move is allowed, except:
+   * Does not perform any check if the remove is allowed, except:
    * If there is no piece at the coordinates, this method will throw an error.
    * @param from_x
    * @param from_y
-   * @param to_x
-   * @param to_y
    */
-  void removePiece(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
+  void removePiece(uint8_t from_x, uint8_t from_y);
 
   /**
    * Removes piece p on coordinates from the board.
    * Does not perform any check if the move is allowed, except:
    * If there is no piece p at the coordinates, this method will throw an error.
+   * @param p
    * @param from_x
    * @param from_y
-   * @param to_x
-   * @param to_y
    */
-  void removePiece(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
+  void removePiece(piece p, uint8_t from_x, uint8_t from_y);
 
   /**
    * Adds the specified piece p to the specified positions.
@@ -112,6 +112,46 @@ class board {
    * @return true if the board is sane, false otherwise.
    */
   bool check_sanity();
+
+  /**
+   * Allows for low-level access of the bit_matrices.
+   * @param p The pieces, the bit_matrix should be returned for.
+   * @return Reference to the respective bit_matrix.
+   */
+  bit_matrix &get_bit_matrix_for_piece(piece p);
+
+  /**
+   * Returns true if no piece is stored on this board, false otherwise.
+   * @return true if no piece is stored on this board, false otherwise.
+   */
+  bool is_empty();
+
+  /**
+   * Returns the total number of pieces on this board.
+   * @return Total number of pieces.
+   */
+  uint8_t get_num_pieces();
+
+  /**
+   * Returns the total number of pieces with the given piece_type on this board.
+   * @param t The piece_type.
+   * @return Total number of pieces of the given type.
+   */
+  uint8_t get_num_pieces(piece_type t);
+
+  /**
+   * Returns the total number of pieces with the given piece_color on this board.
+   * @param c The piece_color.
+   * @return Total number of pieces with the given piece_color.
+   */
+  uint8_t get_num_pieces(piece_color c);
+
+  /**
+  * Returns the total number of pieces.
+  * @param t The piece.
+  * @return Total number of pieces.
+  */
+  uint8_t get_num_pieces(piece p);
 
  private:
 
