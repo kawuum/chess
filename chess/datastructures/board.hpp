@@ -129,7 +129,7 @@ class board {
   bit_matrix black_knights;
   bit_matrix black_pawns;
 
-  uint64_t num_moves_performed;
+  uint64_t num_halfmoves_performed;
 
 };
 
