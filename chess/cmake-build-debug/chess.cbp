@@ -44,6 +44,7 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/Users/sde/my_data/repository/chess_repo/chess/datastructures"/>
 					<Add directory="/usr/local/include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/9.1.0/include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
@@ -65,6 +66,7 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/Users/sde/my_data/repository/chess_repo/chess/datastructures"/>
 					<Add directory="/usr/local/include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/9.1.0/include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
@@ -80,6 +82,12 @@
 				</MakeCommands>
 			</Target>
 		</Build>
+		<Unit filename="/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.cpp">
+			<Option target="chess"/>
+		</Unit>
+		<Unit filename="/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.hpp">
+			<Option target="chess"/>
+		</Unit>
 		<Unit filename="/Users/sde/my_data/repository/chess_repo/chess/main.cpp">
 			<Option target="chess"/>
 		</Unit>

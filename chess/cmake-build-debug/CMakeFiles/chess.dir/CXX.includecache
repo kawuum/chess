@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../datastructures/bit_matrix.hpp
+iostream
+-
+stdint.h
+-
+
+../datastructures/enums.hpp
+
+../datastructures/piece.hpp
+enums.hpp
+../datastructures/enums.hpp
+
+/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.cpp
+bit_matrix.hpp
+/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.hpp
+
+/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.hpp
+iostream
+-
+stdint.h
+-
+
+/Users/sde/my_data/repository/chess_repo/chess/main.cpp
+iostream
+-
+piece.hpp
+/Users/sde/my_data/repository/chess_repo/chess/piece.hpp
+bit_matrix.hpp
+/Users/sde/my_data/repository/chess_repo/chess/bit_matrix.hpp
+

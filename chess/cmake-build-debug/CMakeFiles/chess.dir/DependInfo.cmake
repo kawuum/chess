@@ -4,12 +4,14 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/Users/sde/my_data/repository/chess_repo/chess/datastructures/bit_matrix.cpp" "/Users/sde/my_data/repository/chess_repo/chess/cmake-build-debug/CMakeFiles/chess.dir/datastructures/bit_matrix.cpp.o"
   "/Users/sde/my_data/repository/chess_repo/chess/main.cpp" "/Users/sde/my_data/repository/chess_repo/chess/cmake-build-debug/CMakeFiles/chess.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "AppleClang")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
+  "../datastructures"
   )
 
 # Targets to which this target links.

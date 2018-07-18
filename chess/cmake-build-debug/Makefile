@@ -123,6 +123,33 @@ chess/fast:
 	$(MAKE) -f CMakeFiles/chess.dir/build.make CMakeFiles/chess.dir/build
 .PHONY : chess/fast
 
+datastructures/bit_matrix.o: datastructures/bit_matrix.cpp.o
+
+.PHONY : datastructures/bit_matrix.o
+
+# target to build an object file
+datastructures/bit_matrix.cpp.o:
+	$(MAKE) -f CMakeFiles/chess.dir/build.make CMakeFiles/chess.dir/datastructures/bit_matrix.cpp.o
+.PHONY : datastructures/bit_matrix.cpp.o
+
+datastructures/bit_matrix.i: datastructures/bit_matrix.cpp.i
+
+.PHONY : datastructures/bit_matrix.i
+
+# target to preprocess a source file
+datastructures/bit_matrix.cpp.i:
+	$(MAKE) -f CMakeFiles/chess.dir/build.make CMakeFiles/chess.dir/datastructures/bit_matrix.cpp.i
+.PHONY : datastructures/bit_matrix.cpp.i
+
+datastructures/bit_matrix.s: datastructures/bit_matrix.cpp.s
+
+.PHONY : datastructures/bit_matrix.s
+
+# target to generate assembly for a file
+datastructures/bit_matrix.cpp.s:
+	$(MAKE) -f CMakeFiles/chess.dir/build.make CMakeFiles/chess.dir/datastructures/bit_matrix.cpp.s
+.PHONY : datastructures/bit_matrix.cpp.s
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -159,6 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... chess"
+	@echo "... datastructures/bit_matrix.o"
+	@echo "... datastructures/bit_matrix.i"
+	@echo "... datastructures/bit_matrix.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
