@@ -1,4 +1,0 @@
-"/Applications/CLion 7.app/Contents/bin/cmake/bin/cmake" -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /Users/sde/my_data/repository/chess_repo/chess
--- Configuring done
--- Generating done
--- Build files have been written to: /Users/sde/my_data/repository/chess_repo/chess/cmake-build-debug
