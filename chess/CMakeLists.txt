@@ -3,7 +3,7 @@ project(chess)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp datastructures/bit_matrix.cpp)
+set(SOURCE_FILES main.cpp datastructures/bit_matrix.cpp datastructures/board.cpp)
 
 include_directories(datastructures)
 
