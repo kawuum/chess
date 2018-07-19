@@ -67,6 +67,13 @@ class bit_matrix {
   uint8_t get_num_bits_set() {
     return (uint8_t) __builtin_popcountl(raw);
   }
+  
+  /**
+   * Method to unset all bits.
+   */
+  void clear() {
+      raw = 0;
+  }
 
   /*
    * Helper methods

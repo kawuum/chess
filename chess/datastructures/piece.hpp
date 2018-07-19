@@ -2,16 +2,16 @@
 // Created by Siegfried Depner on 7/12/18.
 //
 
-#ifndef CHESS_PIECE_HPP
-#define CHESS_PIECE_HPP
+#ifndef PIECE_HPP
+#define PIECE_HPP
 
 #include "enums.hpp"
 
-class chess_piece {
+class piece {
 
  public:
 
-  chess_piece(piece_type p_in, piece_color c_in) : p(p_in), c(c_in) {
+  piece(piece_type p_in, piece_color c_in) : p(p_in), c(c_in) {
   }
 
   piece_type get_piece_type() {

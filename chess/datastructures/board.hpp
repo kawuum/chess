@@ -1,3 +1,6 @@
+#include <bits/stdint-uintn.h>
+#include "piece.hpp"
+#include "bit_matrix.hpp"
 //
 // Created by Siegfried Depner on 7/17/18.
 //
@@ -28,7 +31,7 @@ class board {
 
  public:
 
-  board() : num_moves_performed(0) {
+  board() : num_halfmoves_performed(0) {
   }
 
   /**
@@ -153,24 +156,25 @@ class board {
   */
   uint8_t get_num_pieces(piece p);
 
- private:
+ private:   
 
   // White pieces
   bit_matrix white_king;
-  bit_matrix white_queen;
+  bit_matrix white_queens;
   bit_matrix white_bishops;
   bit_matrix white_knights;
   bit_matrix white_pawns;
+  bit_matrix white_rooks;
 
   // Black pieces
   bit_matrix black_king;
-  bit_matrix black_queen;
+  bit_matrix black_queens;
   bit_matrix black_bishops;
   bit_matrix black_knights;
   bit_matrix black_pawns;
+  bit_matrix black_rooks;
 
   uint64_t num_halfmoves_performed;
-
 };
 
 #endif //CHESS_BOARD_HPP
