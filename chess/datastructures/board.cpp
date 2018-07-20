@@ -53,7 +53,49 @@ void board::clear()
 
 bool board::check_sanity()
 {
-    // TODO: implement
+    if((white_bishops.get_raw() & white_king.get_raw()) != 0
+     || (white_bishops.get_raw() & white_knights.get_raw()) != 0
+     || (white_bishops.get_raw() & white_pawns.get_raw()) != 0
+     || (white_bishops.get_raw() & white_queens.get_raw()) != 0
+     || (white_bishops.get_raw() & white_rooks.get_raw()) != 0
+     || (white_king.get_raw() & white_knights.get_raw()) != 0
+     || (white_king.get_raw() & white_pawns.get_raw()) != 0
+     || (white_king.get_raw() & white_queens.get_raw()) != 0
+     || (white_king.get_raw() & white_rooks.get_raw()) != 0
+     || (white_knights.get_raw() & white_pawns.get_raw()) != 0
+     || (white_knights.get_raw() & white_queens.get_raw()) != 0
+     || (white_knights.get_raw() & white_rooks.get_raw()) != 0
+     || (white_pawns.get_raw() & white_queens.get_raw()) != 0
+     || (white_pawns.get_raw() & white_rooks.get_raw()) != 0
+     || (white_queens.get_raw() & white_rooks.get_raw()) != 0)
+    {
+        return false;
+    }
+    
+    if((black_bishops.get_raw() & black_king.get_raw()) != 0
+     || (black_bishops.get_raw() & black_knights.get_raw()) != 0
+     || (black_bishops.get_raw() & black_pawns.get_raw()) != 0
+     || (black_bishops.get_raw() & black_queens.get_raw()) != 0
+     || (black_bishops.get_raw() & black_rooks.get_raw()) != 0
+     || (black_king.get_raw() & black_knights.get_raw()) != 0
+     || (black_king.get_raw() & black_pawns.get_raw()) != 0
+     || (black_king.get_raw() & black_queens.get_raw()) != 0
+     || (black_king.get_raw() & black_rooks.get_raw()) != 0
+     || (black_knights.get_raw() & black_pawns.get_raw()) != 0
+     || (black_knights.get_raw() & black_queens.get_raw()) != 0
+     || (black_knights.get_raw() & black_rooks.get_raw()) != 0
+     || (black_pawns.get_raw() & black_queens.get_raw()) != 0
+     || (black_pawns.get_raw() & black_rooks.get_raw()) != 0
+     || (black_queens.get_raw() & black_rooks.get_raw()) != 0)
+    {
+        return false;
+    }
+    
+    if((this->get_bit_matrix_for_color(WHITE) & this->get_bit_matrix_for_color(BLACK)).get_raw() != 0) {
+        return false;
+    }
+    
+    return true;
 }
 
 bool board::is_empty()
@@ -80,63 +122,24 @@ uint8_t board::get_num_pieces(piece_color c)
 uint8_t board::get_num_pieces(piece p)
 {
     return this->get_bit_matrix_for_piece(p).get_num_bits_set();
-    /*switch(p.get_piece_color())
-    {
-        case WHITE:
-        {
-            switch(p.get_piece_type())
-            {
-                case BISHOP:
-                    return this->white_bishops.get_num_bits_set();
-                    break;
-                case KING:
-                    return this->white_king.get_num_bits_set();
-                    break;
-                case KNIGHT:
-                    return this->white_knights.get_num_bits_set();
-                    break;
-                case PAWN:
-                    return this->white_pawns.get_num_bits_set();
-                    break;
-                case QUEEN:
-                    return this->white_queens.get_num_bits_set();
-                    break;
-                case ROOK:
-                    return this->white_rooks.get_num_bits_set();
-                    break;
-            }
-        }
-        break;
-        case BLACK:
-        {
-            switch(p.get_piece_type())
-            {
-                case BISHOP:
-                    return this->black_bishops.get_num_bits_set();
-                    break;
-                case KING:
-                    return this->black_king.get_num_bits_set();
-                    break;
-                case KNIGHT:
-                    return this->black_knights.get_num_bits_set();
-                    break;
-                case PAWN:
-                    return this->black_pawns.get_num_bits_set();
-                    break;
-                case QUEEN:
-                    return this->black_queens.get_num_bits_set();
-                    break;
-                case ROOK:
-                    return this->black_rooks.get_num_bits_set();
-                    break;
-            }
-        }
-        break;
-    }*/
-    return this->get_bit_matrix_for_piece(p).get_num_bits_set();
 }
 
-bit_matrix & board::get_bit_matrix_for_piece(piece p)
+uint8_t board::get_num_pieces(piece_type t)
+{
+    return this->get_num_pieces(piece(t, WHITE)) + this->get_num_pieces(piece(t, BLACK));
+}
+
+bit_matrix & board::get_bit_matrix_for_color(piece_color c)
+{
+    return ( this->get_bit_matrix_for_piece(piece(BISHOP, c))
+           | this->get_bit_matrix_for_piece(piece(KING, c))
+           | this->get_bit_matrix_for_piece(piece(KNIGHT, c))
+           | this->get_bit_matrix_for_piece(piece(PAWN, c))
+           | this->get_bit_matrix_for_piece(piece(QUEEN, c))
+           | this->get_bit_matrix_for_piece(piece(ROOK, c)));
+}
+
+bit_matrix & board::get_bit_matrix_for_piece(piece p)l
 {
     switch(p.get_piece_color())
     {
@@ -193,10 +196,31 @@ bit_matrix & board::get_bit_matrix_for_piece(piece p)
     }
 }
 
+void board::movePiece(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
+{
+    this->removePiece(p, from_x, from_y);
+    this->get_bit_matrix_for_piece(p).set_bit_at(to_x, to_y);
+    this->num_halfmoves_performed += 1;
+}
 
+void board::movePiece(piece p_from, uint8_t from_x, uint8_t from_y, piece p_to, uint8_t to_x, uint8_t to_y)
+{
+    this->removePiece(p_to, to_x, to_y);
+    this->movePiece(p_from, from_x, from_y, to_x, to_y);
+    this->num_halfmoves_performed += 1;
+}
 
+void board::movePiece(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
+{
+    //TODO: implement
+}
 
+void board::removePiece(piece p, uint8_t from_x, uint8_t from_y)
+{
+    this->get_bit_matrix_for_piece(p).unset_bit_at(from_x, from_y);
+}
 
-
-
-
+void board::removePiece(uint8_t from_x, uint8_t from_y)
+{
+    //TODO: implement
+}

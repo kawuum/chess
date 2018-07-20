@@ -31,8 +31,7 @@ class piece {
   }
 
   bool is_white() {
-    if (c == WHITE) return true;
-    else return false;
+    return (c == WHITE);
   }
 
  private:

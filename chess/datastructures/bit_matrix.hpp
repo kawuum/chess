@@ -24,6 +24,10 @@ class bit_matrix {
 
   bit_matrix() : raw(0) {
   }
+  
+  bit_matrix(uint64_t in) {
+      raw = in;
+  }
 
   bool get_bit_at(uint8_t i) {
     return (raw >> i) & 1;
@@ -73,6 +77,22 @@ class bit_matrix {
    */
   void clear() {
       raw = 0;
+  }
+  
+  /**
+   * Returns the internal representation of the bit matrix
+   * @return Raw bit matrix
+   */
+  uint64_t get_raw() {
+      return raw;
+  }
+  
+  bit_matrix operator&(const bit_matrix &rhs) {
+      return bit_matrix(raw & rhs.raw);
+  }
+  
+  bit_matrix operator|(const bit_matrix &rhs) {
+      return bit_matrix(raw | rhs.raw);
   }
 
   /*
