@@ -124,11 +124,11 @@ class board {
   bit_matrix &get_bit_matrix_for_piece(piece p);
   
   /**
-   * Allows for low-level access of the bit_matrices for the respective colors.
+   * Assembles the bit_matrices for the respective colors.
    * @param c The color the bit_matrix should be returned for.
-   * @return Reference to the respective bit_matrix.
+   * @return The respective bit_matrix.
    */
-  bit_matrix &get_bit_matrix_for_color(piece_color c);
+  bit_matrix get_bit_matrix_for_color(piece_color c);
 
   /**
    * Returns true if no piece is stored on this board, false otherwise.

@@ -129,7 +129,7 @@ uint8_t board::get_num_pieces(piece_type t)
     return this->get_num_pieces(piece(t, WHITE)) + this->get_num_pieces(piece(t, BLACK));
 }
 
-bit_matrix & board::get_bit_matrix_for_color(piece_color c)
+bit_matrix board::get_bit_matrix_for_color(piece_color c)
 {
     return ( this->get_bit_matrix_for_piece(piece(BISHOP, c))
            | this->get_bit_matrix_for_piece(piece(KING, c))
@@ -139,7 +139,7 @@ bit_matrix & board::get_bit_matrix_for_color(piece_color c)
            | this->get_bit_matrix_for_piece(piece(ROOK, c)));
 }
 
-bit_matrix & board::get_bit_matrix_for_piece(piece p)l
+bit_matrix & board::get_bit_matrix_for_piece(piece p)
 {
     switch(p.get_piece_color())
     {

@@ -31,6 +31,16 @@ int main() {
   std::cout << "Board is " << (boa.is_empty() ? "" : "not ") << "empty" << std::endl;
   boa.clear();
   std::cout << "Board is now " << (boa.is_empty() ? "" : "still not ") << "empty" << std::endl;
+  
+  std::cout << std::endl << "New board with only kings and a white queen..." << std::endl;
+  boa.addPiece(p, 4, 0);
+  boa.addPiece(piece(QUEEN, WHITE), 3, 0);
+  boa.addPiece(piece(KING, BLACK), 4, 7);
+  std::cout << "Showing white pieces:" << std::endl;
+  boa.get_bit_matrix_for_color(WHITE).print();
+  std::cout << "Adding white pawn on queens location..." << std::endl;
+  boa.addPiece(piece(PAWN, WHITE), 3, 0);
+  std::cout << "Board is " << (boa.check_sanity() ? "" : "not ") << "sane";
 
   return 0;
 }
