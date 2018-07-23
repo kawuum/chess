@@ -163,8 +163,9 @@ class board {
   */
   uint8_t get_num_pieces(piece p);
 
- private:   
-
+ private:
+  bit_matrix* find_piece(uint8_t from_x, uint8_t from_y);
+  
   // White pieces
   bit_matrix white_king;
   bit_matrix white_queens;

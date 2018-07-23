@@ -212,7 +212,9 @@ void board::movePiece(piece p_from, uint8_t from_x, uint8_t from_y, piece p_to, 
 
 void board::movePiece(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
 {
-    //TODO: implement
+    bit_matrix* rightOne = this->find_piece(from_x, from_y);
+    rightOne->unset_bit_at(from_x, from_y);
+    rightOne->set_bit_at(to_x, to_y);
 }
 
 void board::removePiece(piece p, uint8_t from_x, uint8_t from_y)
@@ -222,5 +224,21 @@ void board::removePiece(piece p, uint8_t from_x, uint8_t from_y)
 
 void board::removePiece(uint8_t from_x, uint8_t from_y)
 {
-    //TODO: implement
+    this->find_piece(from_x, from_y)->unset_bit_at(from_x, from_y);
+}
+
+bit_matrix* board::find_piece(uint8_t from_x, uint8_t from_y)
+{
+    if(this->white_bishops.get_bit_at(from_x, from_y)) return &white_bishops;
+    else if(this->white_king.get_bit_at(from_x, from_y)) return &white_king;
+    else if(this->white_knights.get_bit_at(from_x, from_y)) return &white_knights;
+    else if(this->white_pawns.get_bit_at(from_x, from_y)) return &white_pawns;
+    else if(this->white_queens.get_bit_at(from_x, from_y)) return &white_queens;
+    else if(this->white_rooks.get_bit_at(from_x, from_y)) return &white_rooks;
+    else if(this->black_bishops.get_bit_at(from_x, from_y)) return &black_bishops;
+    else if(this->black_king.get_bit_at(from_x, from_y)) return &black_king;
+    else if(this->black_knights.get_bit_at(from_x, from_y)) return &black_knights;
+    else if(this->black_pawns.get_bit_at(from_x, from_y)) return &black_pawns;
+    else if(this->black_queens.get_bit_at(from_x, from_y)) return &black_queens;
+    else if(this->black_rooks.get_bit_at(from_x, from_y)) return &black_rooks;
 }
