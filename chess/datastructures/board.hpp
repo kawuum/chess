@@ -31,7 +31,7 @@ class board {
 
  public:
 
-  board() : num_halfmoves_performed(0) {
+  board() {
   }
 
   /**
@@ -181,8 +181,6 @@ class board {
   bit_matrix black_knights;
   bit_matrix black_pawns;
   bit_matrix black_rooks;
-
-  uint64_t num_halfmoves_performed;
 };
 
 #endif //CHESS_BOARD_HPP
