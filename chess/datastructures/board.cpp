@@ -181,13 +181,11 @@ bit_matrix &board::get_bit_matrix_for_piece(piece p) {
 void board::move_piece(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y) {
   this->remove_piece(p, from_x, from_y);
   this->get_bit_matrix_for_piece(p).set_bit_at(to_x, to_y);
-  this->num_halfmoves_performed += 1;
 }
 
 void board::move_piece(piece p_from, uint8_t from_x, uint8_t from_y, piece p_to, uint8_t to_x, uint8_t to_y) {
   this->remove_piece(p_to, to_x, to_y);
   this->move_piece(p_from, from_x, from_y, to_x, to_y);
-  this->num_halfmoves_performed += 1;
 }
 
 void board::move_piece(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y) {
