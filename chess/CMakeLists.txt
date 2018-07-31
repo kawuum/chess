@@ -3,8 +3,14 @@ project(chess)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp datastructures/bit_matrix.cpp datastructures/board.cpp)
+find_package(wxWidgets COMPONENTS core base REQUIRED)
+
+include( "${wxWidgets_USE_FILE}" )
+
+set(SOURCE_FILES datastructures/bit_matrix.cpp datastructures/board.cpp gui/MainFrame.cpp gui/MainApp.cpp gui/wxImagePanel.cpp)
 
 include_directories(datastructures)
 
 add_executable(chess ${SOURCE_FILES})
+
+target_link_libraries(chess ${wxWidgets_LIBRARIES})
