@@ -33,6 +33,36 @@ void board::add_piece(piece p, uint8_t x, uint8_t y) {
   }
 }
 
+piece board::get_piece(uint8_t x, uint8_t y) {
+    if(this->black_bishops.get_bit_at(x, y)) {
+     return piece(piece_type::BISHOP, piece_color::BLACK);   
+    } else if(this->black_king.get_bit_at(x, y)) {
+     return piece(piece_type::KING, piece_color::BLACK);   
+    }else if(this->black_knights.get_bit_at(x, y)) {
+     return piece(piece_type::KNIGHT, piece_color::BLACK);   
+    }else if(this->black_pawns.get_bit_at(x, y)) {
+     return piece(piece_type::PAWN, piece_color::BLACK);   
+    }else if(this->black_queens.get_bit_at(x, y)) {
+     return piece(piece_type::QUEEN, piece_color::BLACK);   
+    }else if(this->black_rooks.get_bit_at(x, y)) {
+     return piece(piece_type::ROOK, piece_color::BLACK);   
+    } else if(this->white_bishops.get_bit_at(x, y)) {
+     return piece(piece_type::BISHOP, piece_color::WHITE);   
+    } else if(this->white_king.get_bit_at(x, y)) {
+     return piece(piece_type::KING, piece_color::WHITE);   
+    }else if(this->white_knights.get_bit_at(x, y)) {
+     return piece(piece_type::KNIGHT, piece_color::WHITE);   
+    }else if(this->white_pawns.get_bit_at(x, y)) {
+     return piece(piece_type::PAWN, piece_color::WHITE);   
+    }else if(this->white_queens.get_bit_at(x, y)) {
+     return piece(piece_type::QUEEN, piece_color::WHITE);   
+    }else if(this->white_rooks.get_bit_at(x, y)) {
+     return piece(piece_type::ROOK, piece_color::WHITE);   
+    }
+    // If there is no piece, return an invalid one.    
+    return piece();
+}
+
 void board::clear() {
   this->black_bishops.clear();
   this->black_king.clear();
