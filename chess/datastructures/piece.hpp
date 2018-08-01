@@ -11,10 +11,10 @@ class piece {
 
  public:
 
-  piece() :is_valid(false) {
+  piece() :valid(false) {
   }
      
-  piece(piece_type p_in, piece_color c_in) : is_valid(true), p(p_in), c(c_in) {
+  piece(piece_type p_in, piece_color c_in) : valid(true), p(p_in), c(c_in) {
   }
 
   piece_type get_piece_type() {
@@ -36,9 +36,13 @@ class piece {
   bool is_white() {
     return (c == WHITE);
   }
+  
+  bool is_valid() {
+    return valid;
+  }
 
  private:
-  bool is_valid;
+  bool valid;
   piece_type p;
   piece_color c;
 };
