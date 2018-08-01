@@ -31,6 +31,12 @@ END_EVENT_TABLE()
  void wxImagePanel::keyReleased(wxKeyEvent& event) {}
  */
  
+wxImagePanel::wxImagePanel(wxFrame* parent, int size_x, int size_y) :
+wxPanel(parent)
+{
+    pos_x = pos_y = 0;
+}
+
 wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y) :
 wxPanel(parent)
 {
