@@ -103,6 +103,13 @@ class board {
   void add_piece(piece p, uint8_t x, uint8_t y);
 
   /**
+   * Gets the piece at the specified position.
+   * @param x
+   * @param y
+   */
+  piece get_piece(uint8_t x, uint8_t y);
+  
+  /**
    * Removes all pieces from the board.
    */
   void clear();

@@ -11,7 +11,10 @@ class piece {
 
  public:
 
-  piece(piece_type p_in, piece_color c_in) : p(p_in), c(c_in) {
+  piece() :is_valid(false) {
+  }
+     
+  piece(piece_type p_in, piece_color c_in) : is_valid(true), p(p_in), c(c_in) {
   }
 
   piece_type get_piece_type() {
@@ -35,6 +38,7 @@ class piece {
   }
 
  private:
+  bool is_valid;
   piece_type p;
   piece_color c;
 };
