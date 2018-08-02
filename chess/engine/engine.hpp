@@ -1,6 +1,7 @@
 #include "../datastructures/board.hpp"
 #include "game_history.hpp"
 #include "../datastructures/enums.hpp"
+#include <memory>
 
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
@@ -16,7 +17,7 @@ class engine
     void undo_move();
     board& get_current_board();
   private:
-    game_history* gh;
+    std::shared_ptr<game_history> gh;
 };
 
 #endif
