@@ -48,17 +48,13 @@ bool MainApp::OnInit()
     engine* eng = new engine();
     eng->new_game();
                         
-    draw_board(eng->get_current_board());
-    
-    eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
-    
-    eng->perform_move(0,0,1,3);
-    
-    eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
-    
-    //sleep(3000);
+    eng->perform_move(1,1,1,3); 
+    eng->perform_move(1,3,1,4);
+    eng->perform_move(5,6,5,5);
     
     draw_board(eng->get_current_board());
+    
+    eng->get_current_board().get_bit_matrix_for_color(WHITE).print();
     
     return true;
 }
@@ -71,10 +67,10 @@ bool MainApp::OnInit()
     frame = new MainFrame("Chess", wxPoint(50, 50), wxSize(640, 640));
     sizer = new wxGridSizer(8, 0, 0);
         
-    for(int i = 0; i < 8; ++i) {
-        for(int j = 0; j < 8; ++j) {
+    for(int y = 8; y > 0; --y) {
+        for(int x = 0; x < 8; ++x) {
             
-            piece p = b.get_piece(i, j);
+            piece p = b.get_piece(x, y-1);
             
             if(p.is_valid()) {
                 std::string url = "../gui/images";
@@ -105,7 +101,7 @@ bool MainApp::OnInit()
               frame->drawPane = new wxPanel(frame);   
             }
             
-            if((i+j)%2) {
+            if((x+y)%2) {
                 frame->drawPane->SetBackgroundColour(wxColor(80,80,80));
             } else {
                 frame->drawPane->SetBackgroundColour(wxColor(255,255,255));
