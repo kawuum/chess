@@ -12,7 +12,7 @@ class MainFrame: public wxFrame
 {
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    wxImagePanel * drawPane;
+    wxPanel * drawPane;
 private:
     void OnNewGame(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);

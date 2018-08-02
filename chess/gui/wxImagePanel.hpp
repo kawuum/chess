@@ -7,12 +7,16 @@
 class wxImagePanel : public wxPanel
     {
         wxImage image;
+        wxImage original_image;
         int pos_x, pos_y;
  
     public:
-        wxImagePanel(wxFrame* parent, int size_x, int size_y);
         wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y);
         wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int pos_x, int pos_y);
+        
+        ~wxImagePanel() {
+            std::cout << "DELETING PANEL" << std::endl;
+        }
  
         void paintEvent(wxPaintEvent & evt);
         void paintNow();

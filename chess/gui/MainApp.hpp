@@ -6,15 +6,19 @@
     #include <wx/wx.h>
 #endif
 #include "wxImagePanel.hpp"
+#include "MainFrame.hpp"
 #include "board.hpp"
 #include "piece.hpp"
 
 class MainApp: public wxApp
 {
 public:
-    wxImagePanel *drawPane;
     virtual bool OnInit();
     void draw_board(board& b);
+    
+private:
+    wxGridSizer *sizer;
+    MainFrame *frame;
 };
 
 wxIMPLEMENT_APP(MainApp);
