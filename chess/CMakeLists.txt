@@ -7,7 +7,7 @@ find_package(wxWidgets COMPONENTS core base REQUIRED)
 
 include( "${wxWidgets_USE_FILE}" )
 
-set(SOURCE_FILES datastructures/bit_matrix.cpp datastructures/board.cpp gui/MainFrame.cpp gui/MainApp.cpp gui/wxImagePanel.cpp)
+set(SOURCE_FILES datastructures/bit_matrix.cpp datastructures/board.cpp gui/MainFrame.cpp gui/MainApp.cpp gui/wxImagePanel.cpp engine/engine.cpp)
 
 include_directories(datastructures)
 
