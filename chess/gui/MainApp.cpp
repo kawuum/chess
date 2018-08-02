@@ -1,10 +1,11 @@
 #include "MainApp.hpp"
 #include "MainFrame.hpp"
+#include "../engine/engine.hpp"
 
 bool MainApp::OnInit()
 {
     wxInitAllImageHandlers();
-    
+    /*
     board b;
     
     b.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
@@ -39,9 +40,24 @@ bool MainApp::OnInit()
     b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 4, 6);
     b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 5, 6);
     b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 6, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6);    
+    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6);
+    */
+    
+    engine* eng = new engine();
+    eng->new_game();
                         
-    draw_board(b);
+    draw_board(eng->get_current_board());
+    
+    eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
+    
+    eng->perform_move(1,1,1,3);
+    
+    eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
+    
+    //sleep(3000);
+    
+    draw_board(eng->get_current_board());
+    
     return true;
 }
 
