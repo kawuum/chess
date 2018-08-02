@@ -30,7 +30,8 @@ class bit_matrix {
   }
 
   bool get_bit_at(uint8_t i) {
-    return (raw >> i) & 1;
+    const uint64_t ONE_LEFT = 9223372036854775808u; // Bit-signature is 1000...0
+    return (raw << i) & ONE_LEFT;
   }
 
   /**
@@ -41,7 +42,7 @@ class bit_matrix {
    * @return The set bit on specified position.
    */
   bool get_bit_at(uint8_t x, uint8_t y) {
-    return get_bit_at((8 * (7 - y)) + x);
+    return get_bit_at((8 * y) + x);
   }
 
   /**
@@ -50,7 +51,7 @@ class bit_matrix {
    * @param y The y coordinate to set the bit at (offspring is lower left corner, goes up)
    */
   void set_bit_at(uint8_t x, uint8_t y) {
-    set_bit_at((8 * x) + y);
+    set_bit_at((8 * y) + x);
   }
 
   /**
@@ -59,7 +60,7 @@ class bit_matrix {
    * @param y The y coordinate to set the bit at (offspring is lower left corner, goes up)
    */
   void unset_bit_at(uint8_t x, uint8_t y) {
-    unset_bit_at((8 * x) + y);
+    unset_bit_at((8 * y) + x);
   }
 
   /**
@@ -98,14 +99,16 @@ class bit_matrix {
   /*
    * Helper methods
    */
-  // TODO: Deleteme at some point
+  // TODO: Delete me at some point
   void print() {
-    for (uint8_t i = 0; i < 8; ++i) {
-      for (uint8_t j = 0; j < 8; ++j) {
-        std::cout << get_bit_at(i, j);
+    std::cout << "--------" << std::endl;
+    for (uint8_t y = 8; y > 0; --y) {
+      for (uint8_t x = 0; x < 8; ++x) {
+        std::cout << get_bit_at(x, y - 1);
       }
       std::cout << std::endl;
     }
+    std::cout << "--------" << std::endl;
   }
 
  private:
@@ -117,8 +120,8 @@ class bit_matrix {
   }
 
   void unset_bit_at(uint8_t i) {
-    const uint64_t ZERO_LEFT = 9223372036854775807u; // Bit-signature is 0111...1
-    raw = raw & (ZERO_LEFT >> i);
+    const uint64_t ONE_LEFT = 9223372036854775808u; // Bit-signature is 1000...0
+    raw = raw & (~(ONE_LEFT >> i));
   }
 
 };
