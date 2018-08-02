@@ -4,6 +4,8 @@
 bool MainApp::OnInit()
 {
     wxInitAllImageHandlers();
+    frame = NULL;
+
     
     board b;
     
@@ -42,16 +44,21 @@ bool MainApp::OnInit()
     b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6);    
                         
     draw_board(b);
+    
+    draw_board(b);
     return true;
 }
 
     void MainApp::draw_board(board& b) {
-            wxGridSizer* sizer = new wxGridSizer(8, 0, 0);
-    MainFrame *frame = new MainFrame("Chess", wxPoint(50, 50), wxSize(640, 640));
+        
+    if (frame != NULL) {
+        frame->Destroy();
+    }
+    frame = new MainFrame("Chess", wxPoint(50, 50), wxSize(640, 640));
+    sizer = new wxGridSizer(8, 0, 0);
         
     for(int i = 0; i < 8; ++i) {
         for(int j = 0; j < 8; ++j) {
-            wxPanel *drawPane;
             
             piece p = b.get_piece(i, j);
             
@@ -78,20 +85,19 @@ bool MainApp::OnInit()
                     url = url + "p";
                 } 
                 url = url + ".png";
-                drawPane = new wxImagePanel(frame, url, 80, 80);
+                frame->drawPane = new wxImagePanel(frame, url, 80, 80, 0, 0);
                 
-            } else {
-               
-              drawPane = new wxPanel(frame);   
+            } else {               
+              frame->drawPane = new wxPanel(frame);   
             }
             
             if((i+j)%2) {
-                drawPane->SetBackgroundColour(wxColor(80,80,80));
+                frame->drawPane->SetBackgroundColour(wxColor(80,80,80));
             } else {
-                drawPane->SetBackgroundColour(wxColor(255,255,255));
+                frame->drawPane->SetBackgroundColour(wxColor(255,255,255));
             }
             
-            sizer->Add(drawPane, 1, wxEXPAND);
+            sizer->Add(frame->drawPane, 1, wxEXPAND);
         }
     }
     

@@ -31,27 +31,19 @@ END_EVENT_TABLE()
  void wxImagePanel::keyReleased(wxKeyEvent& event) {}
  */
  
-wxImagePanel::wxImagePanel(wxFrame* parent, int size_x, int size_y) :
-wxPanel(parent)
-{
-    pos_x = pos_y = 0;
-}
-
-wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y) :
-wxPanel(parent)
+wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y) : wxPanel(parent), pos_x(0), pos_y(0)
 {
     // load the file... ideally add a check to see if loading was successful
     image.LoadFile(file);
+    original_image = image;
     image.Rescale(size_x, size_y, wxIMAGE_QUALITY_NORMAL);
-    pos_x = pos_y = 0;
 }
 
-wxImagePanel::wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int pos_x, int pos_y)
+wxImagePanel::wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int pos_x, int pos_y): wxPanel(parent), pos_x(pos_x), pos_y(pos_y)
 {
     image.LoadFile(file);
+    original_image = image;
     image.Rescale(size_x, size_y, wxIMAGE_QUALITY_NORMAL);
-    this->pos_x = pos_x;
-    this->pos_y = pos_y;
 }
 
  
@@ -90,7 +82,11 @@ void wxImagePanel::paintNow()
  */
 void wxImagePanel::render(wxDC&  dc)
 {
-    dc.DrawBitmap(image, pos_x, pos_y, false );
+    image = original_image;
+    if(this->GetSize().GetWidth() > 0 && this->GetSize().GetHeight() > 0) {
+        image.Rescale(this->GetSize().GetWidth(), this->GetSize().GetHeight(), wxIMAGE_QUALITY_NORMAL);
+        dc.DrawBitmap(image, pos_x, pos_y, false );
+    }
 }
 
 void wxImagePanel::setRenderPosition(int pos_x, int pos_y)
