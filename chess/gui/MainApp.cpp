@@ -52,7 +52,7 @@ bool MainApp::OnInit()
     
     eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
     
-    eng->perform_move(1,1,1,3);
+    eng->perform_move(0,0,1,3);
     
     eng->get_current_board().get_bit_matrix_for_color(BLACK).print();
     

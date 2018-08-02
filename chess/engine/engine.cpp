@@ -2,7 +2,7 @@
 
 void engine::new_game()
 {
-    this->gh = new game_history;
+    this->gh = std::make_shared<game_history>();
     this->gh->num_halfmoves = 0;
     this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
     this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
@@ -43,7 +43,8 @@ void engine::perform_move(int from_x, int from_y, int to_x, int to_y)
 {
     // TODO: CHECK IF MOVE IS LEGAL
     // TODO: Possible memory leaks...
-    game_history* new_gm = new game_history;
+    
+    std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
     
     new_gm->curr_board = this->gh->curr_board;
     new_gm->curr_board.move_piece(from_x, from_y, to_x, to_y);
