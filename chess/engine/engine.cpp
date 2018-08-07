@@ -1,4 +1,6 @@
 #include "engine.hpp"
+#include "move_generation.hpp"
+#include "move_generation.hpp"
 
 void engine::new_game()
 {
@@ -49,6 +51,11 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
 {
     // TODO: CHECK IF MOVE IS LEGAL
     // TODO: Possible memory leaks...
+    
+    move_generation mg;
+    std::vector<move> moves = mg.generate_moves(p, from_x, from_y, this->gh);
+    
+    //check if move to perform is in generated moves --> LEGALITY CHECK
     
     piece pie = this->gh->curr_board.get_piece(from_x, from_y);
     if(!pie.is_valid())

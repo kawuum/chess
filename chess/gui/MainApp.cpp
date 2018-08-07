@@ -12,7 +12,7 @@ bool MainApp::OnInit()
     
     draw_board(eng->get_current_board());
                         
-    eng->perform_move(1,1,1,3); 
+    /*eng->perform_move(1,1,1,3); 
     eng->perform_move(5,6,5,5);
     eng->perform_move(1,3,1,4);
     
@@ -30,6 +30,8 @@ bool MainApp::OnInit()
     eng->undo_move();
     eng->undo_move();
     eng->undo_move();
+    draw_board(eng->get_current_board());*/
+    eng->perform_move(1,0,2,2);
     draw_board(eng->get_current_board());
     
     return true;
