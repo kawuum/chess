@@ -12,8 +12,8 @@ class engine
     engine() { }
     void new_game();
     void new_game(std::string fen);
-    void perform_move(int from_x, int from_y, int to_x, int to_y);
-    void perform_move(piece p, int from_x, int from_y, int to_x, int to_y);
+    void perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
+    void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
     void undo_move();
     board& get_current_board();
   private:

@@ -7,59 +7,35 @@ bool MainApp::OnInit()
     wxInitAllImageHandlers();
     frame = NULL;
 
-    board b;
-    
-    /*
-    b.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
-    b.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
-    b.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 2, 0);
-    b.add_piece(piece(piece_type::QUEEN, piece_color::WHITE), 3, 0);
-    b.add_piece(piece(piece_type::KING, piece_color::WHITE), 4, 0);
-    b.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 5, 0);
-    b.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 6, 0);
-    b.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 7, 0);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 0, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 1, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 2, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 3, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 4, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 5, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 6, 1);
-    b.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 7, 1);                   
-        
-    b.add_piece(piece(piece_type::ROOK, piece_color::BLACK), 0, 7);
-    b.add_piece(piece(piece_type::KNIGHT, piece_color::BLACK), 1, 7);
-    b.add_piece(piece(piece_type::BISHOP, piece_color::BLACK), 2, 7);   
-    b.add_piece(piece(piece_type::QUEEN, piece_color::BLACK), 3, 7);
-    b.add_piece(piece(piece_type::KING, piece_color::BLACK), 4, 7);
-    b.add_piece(piece(piece_type::BISHOP, piece_color::BLACK), 5, 7);
-    b.add_piece(piece(piece_type::KNIGHT, piece_color::BLACK), 6, 7);
-    b.add_piece(piece(piece_type::ROOK, piece_color::BLACK), 7, 7);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 0, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 1, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 2, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 3, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 4, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 5, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 6, 6);
-    b.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6);
-    */
-    
     engine* eng = new engine();
     eng->new_game();
+    
+    draw_board(eng->get_current_board());
                         
     eng->perform_move(1,1,1,3); 
-    eng->perform_move(1,3,1,4);
     eng->perform_move(5,6,5,5);
+    eng->perform_move(1,3,1,4);
     
     draw_board(eng->get_current_board());
     
-    eng->get_current_board().get_bit_matrix_for_color(WHITE).print();
+    eng->undo_move();
+    
+    draw_board(eng->get_current_board());
+    
+    eng->perform_move(2,1,2,3);
+    
+    draw_board(eng->get_current_board());
+    eng->undo_move();
+    eng->undo_move();
+    eng->undo_move();
+    eng->undo_move();
+    eng->undo_move();
+    draw_board(eng->get_current_board());
     
     return true;
 }
 
-    void MainApp::draw_board(board& b) {
+void MainApp::draw_board(board& b) {
         
     if (frame != NULL) {
         frame->Destroy();
@@ -114,4 +90,4 @@ bool MainApp::OnInit()
     frame->SetSizer(sizer);
     
     frame->Show(true);
-    }
+}

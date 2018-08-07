@@ -4,6 +4,7 @@ void engine::new_game()
 {
     this->gh = std::make_shared<game_history>();
     this->gh->num_halfmoves = 0;
+    this->gh->to_move = WHITE;
     this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
     this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
     this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 2, 0);
@@ -39,15 +40,29 @@ void engine::new_game()
     this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6); 
 }
 
-void engine::perform_move(int from_x, int from_y, int to_x, int to_y)
+void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
+{
+    this->perform_move(piece(), from_x, from_y, to_x, to_y);
+}
+
+void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
 {
     // TODO: CHECK IF MOVE IS LEGAL
     // TODO: Possible memory leaks...
     
+    piece pie = this->gh->curr_board.get_piece(from_x, from_y);
+    if(!pie.is_valid())
+        return;
+    if(pie.get_piece_color() != this->gh->to_move)
+        return;
+    /*if(pie != p)
+        return; //should we just return here? or maybe ignore if the move seems to be legal?
+    */
+    
     std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
     
     new_gm->curr_board = this->gh->curr_board;
-    new_gm->curr_board.move_piece(from_x, from_y, to_x, to_y);
+    new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
     new_gm->to_move = this->gh->to_move == WHITE ? BLACK : WHITE;
     new_gm->prev = this->gh;
@@ -57,5 +72,12 @@ void engine::perform_move(int from_x, int from_y, int to_x, int to_y)
 board& engine::get_current_board() {
     return this->gh->curr_board;
 }
+
+void engine::undo_move()
+{
+    if(this->gh->prev != NULL)
+        this->gh = this->gh->prev;
+}
+
 
 
