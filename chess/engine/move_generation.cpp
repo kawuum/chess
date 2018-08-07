@@ -46,7 +46,7 @@ std::vector<move> move_generation::knightmoves(piece mover, uint8_t from_x, uint
         if(from_x + x < 0 || from_x + x > 7 || x == 0)
             continue;
         for(int y = -2; y <= 2; ++y) {
-            if(from_y + y <0 || from_y + y > 7 || y == 0 || x%2 == y%2)
+            if((from_y + y < 0) || (from_y + y > 7) || (y == 0) || (x%2 == y%2))
                 continue;
             //check occupancy, if not occupied by friendly piece, add move to vector
             if(b.get_piece(from_x + x, from_y + y).is_valid() && (b.get_piece(from_x + x, from_y + y).get_piece_color() != mover.get_piece_color())) {
