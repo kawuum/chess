@@ -44,7 +44,7 @@ void engine::new_game()
 
 void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
 {
-    this->perform_move(piece(), from_x, from_y, to_x, to_y);
+    this->perform_move(this->gh->curr_board.get_piece(from_x, from_y), from_x, from_y, to_x, to_y);
 }
 
 std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_y) {
@@ -62,7 +62,8 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     
     //check if move to perform is in generated moves --> LEGALITY CHECK
     
-    piece pie = this->gh->curr_board.get_piece(from_x, from_y);
+    //if(!p.is_valid())
+        piece pie = this->gh->curr_board.get_piece(from_x, from_y);
     if(!pie.is_valid())
         return;
     if(pie.get_piece_color() != this->gh->to_move)
