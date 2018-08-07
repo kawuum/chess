@@ -31,6 +31,9 @@ bool MainApp::OnInit()
     eng->undo_move();
     eng->undo_move();
     draw_board(eng->get_current_board());*/
+    
+    std::vector<move> moves = eng->get_legal_moves(piece(KNIGHT, WHITE), 1, 0);
+    
     eng->perform_move(1,0,2,2);
     draw_board(eng->get_current_board());
     

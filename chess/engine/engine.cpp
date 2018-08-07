@@ -47,6 +47,11 @@ void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t 
     this->perform_move(piece(), from_x, from_y, to_x, to_y);
 }
 
+std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_y) {
+    move_generation mg;
+    return mg.generate_moves(p, from_x, from_y, this->gh);
+}
+
 void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
 {
     // TODO: CHECK IF MOVE IS LEGAL
