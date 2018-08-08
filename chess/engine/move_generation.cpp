@@ -89,7 +89,7 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             //check occupancy, if not occupied by friendly piece, add move to vector
             auto p = b.get_piece(from_x + x, from_y + y);
             if(p.is_valid() && p.get_piece_color() != mover.get_piece_color()) {
-                moves.insert(moves.end(), (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
             }
         }
     }
@@ -120,7 +120,31 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
 {
     assert(mover.get_piece_type() == PAWN);
     
-    // TODO: FANCY FAIRY MAGIC STUFF HAPPENING HERE
+    int8_t y, starting_y;
+    y = mover.get_piece_color() == WHITE ? 1 : -1;
+    starting_y = mover.get_piece_color() == WHITE ? 1 : 6;
+    
+    //check possible capture moves
+    //we don't have to boundary check y here, since a pawn on the last file gets promoted (and can't move backwards)
+    for(int8_t x = -1; x < 2; x += 2) {
+        if((from_x + x > 0) && (from_x + x < 7)) {
+            piece p = b.get_piece(from_x + x, from_y + y);
+            if(p.is_valid() && p.get_piece_color() != mover.get_piece_color())
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+        }
+    }
+    
+    //check occupancy for tile ahead of piece
+    piece p = b.get_piece(from_x, from_y + y);
+    if(!p.is_valid()) {
+        moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y)});
+        //check if we are still on the starting file
+        if(from_y == starting_y) {
+            p = b.get_piece(from_x, from_y + 2*y);
+            if(!p.is_valid())
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y)});
+        }
+    }
 }
 
 
