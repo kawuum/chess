@@ -6,7 +6,7 @@ void engine::new_game()
 {
     this->gh = std::make_shared<game_history>();
     this->gh->num_halfmoves = 0;
-    this->gh->to_move = WHITE;
+    this->gh->to_move = piece_color::WHITE;
     this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
     this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
     this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 2, 0);
@@ -77,7 +77,7 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     new_gm->curr_board = this->gh->curr_board;
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
-    new_gm->to_move = this->gh->to_move == WHITE ? BLACK : WHITE;
+    new_gm->to_move = this->gh->to_move == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
     new_gm->prev = this->gh;
     this->gh = new_gm;
 }

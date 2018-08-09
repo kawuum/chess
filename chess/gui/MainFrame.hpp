@@ -7,16 +7,19 @@
 #endif
 #include <wx/sizer.h>
 #include "wxImagePanel.hpp"
+#include <memory>
 
 class MainFrame: public wxFrame
 {
 public:
-    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-    wxPanel * drawPane;
+    MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, wxImagePanel** panels);
+    wxImagePanel** panels;
+    
 private:
     void OnNewGame(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
+    
     wxDECLARE_EVENT_TABLE();
 };
 

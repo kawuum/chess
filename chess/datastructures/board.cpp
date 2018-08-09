@@ -115,7 +115,7 @@ bool board::check_sanity() {
     return false;
   }
 
-  if ((this->get_bit_matrix_for_color(WHITE) & this->get_bit_matrix_for_color(BLACK)).get_raw() != 0) {
+  if ((this->get_bit_matrix_for_color(piece_color::WHITE) & this->get_bit_matrix_for_color(piece_color::BLACK)).get_raw() != 0) {
     return false;
   }
 
@@ -128,7 +128,7 @@ bool board::is_empty() {
 
 
 uint8_t board::get_num_pieces() {
-  return this->get_num_pieces(BLACK) + this->get_num_pieces(WHITE);
+  return this->get_num_pieces(piece_color::BLACK) + this->get_num_pieces(piece_color::WHITE);
 }
 
 uint8_t board::get_num_pieces(piece_color c) {
@@ -145,7 +145,7 @@ uint8_t board::get_num_pieces(piece p) {
 }
 
 uint8_t board::get_num_pieces(piece_type t) {
-  return this->get_num_pieces(piece(t, WHITE)) + this->get_num_pieces(piece(t, BLACK));
+  return this->get_num_pieces(piece(t, piece_color::WHITE)) + this->get_num_pieces(piece(t, piece_color::BLACK));
 }
 
 bit_matrix board::get_bit_matrix_for_color(piece_color c) {
@@ -159,7 +159,7 @@ bit_matrix board::get_bit_matrix_for_color(piece_color c) {
 
 bit_matrix &board::get_bit_matrix_for_piece(piece p) {
   switch (p.get_piece_color()) {
-    case WHITE: {
+    case piece_color::WHITE: {
       switch (p.get_piece_type()) {
         case BISHOP:
           return this->white_bishops;
@@ -182,7 +182,7 @@ bit_matrix &board::get_bit_matrix_for_piece(piece p) {
       }
     }
       break;
-    case BLACK: {
+    case piece_color::BLACK: {
       switch (p.get_piece_type()) {
         case BISHOP:
           return this->black_bishops;
