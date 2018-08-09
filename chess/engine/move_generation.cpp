@@ -70,7 +70,7 @@ void move_generation::knightmoves(piece mover, uint8_t from_x, uint8_t from_y, b
         if(from_x + x < 0 || from_x + x > 7 || x == 0)
             continue;
         for(int8_t y = -2; y <= 2; ++y) {
-            if((from_y + y < 0) || (from_y + y > 7) || (y == 0) || (x%2 == y%2))
+            if((from_y + y < 0) || (from_y + y > 7) || (y == 0) || (std::abs(x%2) == std::abs(y%2)))
                 continue;
             //check occupancy, if not occupied by friendly piece, add move to vector
             auto p = b.get_piece(from_x + x, from_y + y);
@@ -94,7 +94,7 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 continue;
             //check occupancy, if not occupied by friendly piece, add move to vector
             auto p = b.get_piece(from_x + x, from_y + y);
-            if(p.is_valid() && p.get_piece_color() != mover.get_piece_color()) {
+            if(!p.is_valid() || (p.is_valid() && p.get_piece_color() != mover.get_piece_color())) {
                 moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
             }
         }
@@ -209,7 +209,7 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
     //check possible capture moves
     //we don't have to boundary check y here, since a pawn on the last file gets promoted (and can't move backwards)
     for(int8_t x = -1; x < 2; x += 2) {
-        if((from_x + x > 0) && (from_x + x < 7)) {
+        if((from_x + x >= 0) && (from_x + x <= 7)) {
             piece p = b.get_piece(from_x + x, from_y + y);
             if(p.is_valid() && p.get_piece_color() != mover.get_piece_color())
                 moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
@@ -224,7 +224,7 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
         if(from_y == starting_y) {
             p = b.get_piece(from_x, from_y + 2*y);
             if(!p.is_valid())
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y)});
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y*2)});
         }
     }
 }

@@ -14,7 +14,7 @@ class MainFrame: public wxFrame
 public:
     MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, wxImagePanel** panels);
     wxImagePanel** panels;
-    
+    void recolor_board();
 private:
     void OnNewGame(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);

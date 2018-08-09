@@ -1,4 +1,5 @@
 #include "MainFrame.hpp"
+#include "../datastructures/consts.hpp"
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, wxImagePanel** panels)
         : wxFrame(NULL, wxID_ANY, title, pos, size), panels(panels)
@@ -33,6 +34,21 @@ void MainFrame::OnNewGame(wxCommandEvent& event)
     //wxLogMessage("Welcome to Chess!");
     // TODO: implement
 }
+
+void MainFrame::recolor_board()
+{
+    for(int y = 8; y > 0; --y) {
+        for(int x = 0; x < 8; ++x) {
+            if((x+y)%2) {
+                panels[x + (8 * (y-1))]->SetBackgroundColour(BG_GREY);
+            } else {
+                panels[x + (8 * (y-1))]->SetBackgroundColour(BG_WHITE);
+            }
+            panels[x + (8 * (y-1))]->paintNow();
+        }
+    }
+}
+
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_NewGame,   MainFrame::OnNewGame)
