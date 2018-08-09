@@ -71,15 +71,24 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     /*if(pie != p)
         return; //should we just return here? or maybe ignore if the move seems to be legal?
     */
-    
+        
     std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
     
-    new_gm->curr_board = this->gh->curr_board;
+    new_gm->curr_board = this->gh->curr_board;  
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
+    piece captured_piece = this->gh->curr_board.get_piece(to_x, to_y);
+    if(captured_piece.is_valid()) {
+        new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);
+    }  
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
     new_gm->to_move = this->gh->to_move == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
     new_gm->prev = this->gh;
     this->gh = new_gm;
+}
+
+void engine::perform_move(move m)
+{
+    perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
 }
 
 board& engine::get_current_board() {
@@ -92,5 +101,7 @@ void engine::undo_move()
         this->gh = this->gh->prev;
 }
 
-
+piece_color engine::get_color_to_move() {
+    return this->gh->to_move;
+}
 

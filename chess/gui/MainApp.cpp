@@ -1,6 +1,7 @@
 #include "MainApp.hpp"
 #include "MainFrame.hpp"
 #include "../engine/engine.hpp"
+#include "../datastructures/consts.hpp"
 
 MainApp::~MainApp() {
     if(panels != NULL) {
@@ -19,29 +20,15 @@ bool MainApp::OnInit()
     eng = std::make_shared<engine>();
     eng->new_game();
     
-    draw_board(eng->get_current_board());
-                                
-    std::vector<move> moves = eng->get_legal_moves(piece(KNIGHT, piece_color::WHITE), 1, 0);
+    frame = new MainFrame("Chess", wxPoint(50, 50), wxSize(640, 640), panels);
     
-    eng->perform_move(1,0,2,2);
-    eng->perform_move(1,6,1,5);
-    eng->perform_move(0,1,0,2);
-    eng->perform_move(1,5,1,4);
-    auto l_moves =eng-> get_legal_moves(piece{piece_type::ROOK, piece_color::WHITE}, 0, 0);
-    std::cout << "lmoves size is: " << l_moves.size() << std::endl;
     draw_board(eng->get_current_board());
     
     return true;
 }
 
 void MainApp::draw_board(board& b) {
-        
-    if (frame != NULL) {
-        frame->Destroy();
-        delete frame;
-    }
-    
-    frame = new MainFrame("Chess", wxPoint(50, 50), wxSize(640, 640), panels);
+
     sizer = new wxGridSizer(8, 0, 0);
         
     for(int y = 8; y > 0; --y) {
@@ -76,37 +63,65 @@ void MainApp::draw_board(board& b) {
                 url = url + ".png";
                              
               imagePanel = new wxImagePanel(frame, url, 80, 80, 0, 0, x, y - 1, std::bind(&MainApp::notify_click, this, std::placeholders::_1, std::placeholders::_2));
-              frame->panels[x + (x * (y - 1))] = imagePanel;
+              frame->panels[x + (8 * (y - 1))] = imagePanel;
                 
             } else { 
               imagePanel = new wxImagePanel(frame, 80, 80, x, y - 1,std::bind(&MainApp::notify_click, this, std::placeholders::_1, std::placeholders::_2));  
-              frame->panels[x + (x * (y - 1))] = imagePanel;
+              frame->panels[x + (8 * (y - 1))] = imagePanel;
             }
-            
-            if((x+y)%2) {
-                imagePanel->SetBackgroundColour(wxColor(80,80,80));
-            } else {
-                imagePanel->SetBackgroundColour(wxColor(255,255,255));
-            }
-            
             sizer->Add(imagePanel, 1, wxEXPAND);
         }
     }
-    
     frame->SetSizer(sizer);
-    
+    frame->Layout();
     frame->Show(true);
+    frame->recolor_board(); 
 }
 
 void MainApp::notify_click(uint8_t x_coord, uint8_t y_coord) {
-    if(!clicked) {
+    
+    if(!clicked) { // First time clicked, we check if the click is on a piece, else return
+        auto piece = eng->get_current_board().get_piece(x_coord, y_coord);
+     if(!piece.is_valid() || piece.get_piece_color() != eng->get_color_to_move()){
+      return;   
+     }
      clicked = true;
+     clicked_coords = std::make_tuple(x_coord, y_coord);
+          
+     panels[x_coord + (8 * y_coord)]->SetBackgroundColour(BG_RED);
+     panels[x_coord + (8 * y_coord)]->paintNow();
      
-     panels[x_coord + (x_coord * (y_coord))]->SetBackgroundColour(wxColor(255, 0, 0));
-     panels[x_coord + (x_coord * (y_coord))]->paintNow();
-    } else {
+     std::vector<move> possible_moves = eng->get_legal_moves(eng->get_current_board().get_piece(x_coord, y_coord), x_coord, y_coord);
      
-     clicked = false;
+     for(auto it = possible_moves.begin(); it < possible_moves.end(); ++it) {
+         panels[it->to_x + (8 * it->to_y)]->SetBackgroundColour(BG_BLUE);
+         panels[it->to_x + (8 * it->to_y)]->paintNow();
+     }
+     
+    } else { // A piece was already clicked, now we need to check if this is a possible move click or a disable piece click
+     
+     if(std::get<0>(clicked_coords) == x_coord && std::get<1>(clicked_coords) == y_coord) { // Check if this is a diable piece click      
+        frame->recolor_board();
+        clicked = false;
+     } else {  // Check if this is a possible move click
+         std::vector<move> possible_moves = eng->get_legal_moves(eng->get_current_board().get_piece(std::get<0>(clicked_coords), std::get<1>(clicked_coords)), std::get<0>(clicked_coords), std::get<1>(clicked_coords));
+         if(possible_moves.empty())
+         {
+             return;
+         }
+         move p_moved{possible_moves[0].mover, possible_moves[0].from_x, possible_moves[0].from_y, x_coord, y_coord};
+         auto clicked_move = std::find(possible_moves.begin(), possible_moves.end(), p_moved) ;
+         if(clicked_move != possible_moves.end()) { // it is a possible move click
+            frame->recolor_board();
+            clicked = false; 
+            eng->perform_move(*clicked_move);
+            draw_board(eng->get_current_board());
+            std::cout << "WE ARE GREAT" << std::endl;
+         }
+     }
+        
+        
+     
     }
-    std::cout << "HOLY I AM CALLED with " << (int)x_coord << " " << (int)y_coord << std::endl;
+    
 }

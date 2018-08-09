@@ -11,6 +11,7 @@
 #include "piece.hpp"
 #include "../engine/engine.hpp"
 #include <memory>
+#include <tuple>
 
 class MainApp: public wxApp
 {
@@ -27,6 +28,7 @@ private:
     std::shared_ptr<engine> eng;
     
     bool clicked;
+    std::tuple<uint8_t, uint8_t> clicked_coords;
 };
 
 wxIMPLEMENT_APP(MainApp);
