@@ -2,7 +2,7 @@
 #include "assert.h"
 
 std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, std::shared_ptr<game_history> gh)
-{
+{    
     assert(mover.is_valid());
     assert(mover.get_piece_color() == gh->to_move);
     return generate_moves(mover, from_x, from_y, gh->curr_board);
@@ -15,37 +15,43 @@ std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, u
 
     switch(mover.get_piece_type()) {
         case KNIGHT: {
-            std::vector<move> moves(8);
+            std::vector<move> moves;
+            moves.reserve(8);
             knightmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
         }
         case KING: {
-            std::vector<move> moves(8);
+            std::vector<move> moves;
+            moves.reserve(8);
             kingmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
         }
         case BISHOP: {
-            std::vector<move> moves(14);
+            std::vector<move> moves;
+            moves.reserve(14);
             bishopmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
         }
         case ROOK: {
-            std::vector<move> moves(14);
+            std::vector<move> moves;
+            moves.reserve(14);
             rookmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
         }
         case PAWN: {
-            std::vector<move> moves(4);
+            std::vector<move> moves;
+            moves.reserve(4);
             pawnmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
         }
         case QUEEN: {
-            std::vector<move> moves(28);
+            std::vector<move> moves;
+            moves.reserve(28);
             queenmoves(mover, from_x, from_y, b, moves);
             return moves;
             break;
@@ -106,8 +112,84 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
 {
     assert(mover.get_piece_type() == ROOK || mover.get_piece_type() == QUEEN);
     
-    // TODO: FANCY FAIRY MAGIC STUFF HAPPENING HERE
+    piece_color mover_color = mover.get_piece_color();
+    bool stopped[4] = {false}; /* x-left, x-right, y-down, y-up */
+    uint8_t x_diff = 1;
+    uint8_t y_diff = 1;
+    
+    while((from_x - x_diff >= 0) || (from_x + x_diff <= 7) || (from_y - y_diff >= 0) || (from_y + y_diff <= 7)) {
+        
+        // x-left
+        if(!stopped[0] && (int8_t) from_x - x_diff >= 0) {
+         piece p = b.get_piece(from_x - x_diff, from_y);
+         if(p.is_valid()) {         
+            piece_color p_col = p.get_piece_color();
+            if(p_col != mover_color) {
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y});
+                stopped[0] = true;
+            } else {
+                stopped[0] = true;   
+            }                
+          } else {
+            moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y});
+          }
+        }
+        
+        // x-right
+        if(!stopped[1] && (int8_t) from_x + x_diff <= 7) {
+         piece p = b.get_piece(from_x + x_diff, from_y);
+         if(p.is_valid()) {         
+            piece_color p_col = p.get_piece_color();
+            if(p_col != mover_color) {
+                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y});
+                stopped[1] = true;
+            } else {
+                stopped[1] = true;   
+            }                
+          } else {
+              moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y}); 
+          }
+        }
+        
+        // y-down
+        if(!stopped[2] && (int8_t) from_y - y_diff >= 0) {
+         piece p = b.get_piece(from_x, from_y - y_diff);
+         if(p.is_valid()) {
+            piece_color p_col = p.get_piece_color();
+            if(p_col != mover_color) {
+                moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff)});
+                stopped[2] = true;
+            } else {
+                stopped[2] = true;   
+            }                
+          } else {
+              moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff)}); 
+          }
+        }
+        
+        // y-up
+        if(!stopped[3] && (int8_t) from_y + y_diff <=7) {
+         piece p = b.get_piece(from_x, from_y + y_diff);
+         if(p.is_valid()) {
+            piece_color p_col = p.get_piece_color();
+            if(p_col != mover_color) {
+                moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff)});
+                stopped[3] = true;
+            } else {
+                stopped[3] = true;   
+            }                
+          } else {
+              moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff)});
+          }
+        }
+        ++x_diff;
+        ++y_diff;
+    }
+        
 }
+    
+    
+
 
 void move_generation::queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
 {
@@ -121,8 +203,8 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
     assert(mover.get_piece_type() == PAWN);
     
     int8_t y, starting_y;
-    y = mover.get_piece_color() == WHITE ? 1 : -1;
-    starting_y = mover.get_piece_color() == WHITE ? 1 : 6;
+    y = mover.get_piece_color() == piece_color::WHITE ? 1 : -1;
+    starting_y = mover.get_piece_color() == piece_color::WHITE ? 1 : 6;
     
     //check possible capture moves
     //we don't have to boundary check y here, since a pawn on the last file gets promoted (and can't move backwards)

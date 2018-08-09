@@ -8,7 +8,7 @@
 enum piece_type {
   KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN
 };
-enum piece_color {
+enum class piece_color {
   WHITE, BLACK
 };
 

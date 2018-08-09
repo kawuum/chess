@@ -1,8 +1,10 @@
 #include "MainFrame.hpp"
 
-MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
-        : wxFrame(NULL, wxID_ANY, title, pos, size)
+MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, wxImagePanel** panels)
+        : wxFrame(NULL, wxID_ANY, title, pos, size), panels(panels)
 {
+    
+        
     wxMenu *menuFile = new wxMenu;
     menuFile->Append(ID_NewGame, "&New Game\tCtrl-N",
                      "Start a new game");

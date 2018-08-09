@@ -2,9 +2,10 @@
 
 BEGIN_EVENT_TABLE(wxImagePanel, wxPanel)
 // some useful events
-/*
- EVT_MOTION(wxImagePanel::mouseMoved)
+
  EVT_LEFT_DOWN(wxImagePanel::mouseDown)
+ /*
+ EVT_MOTION(wxImagePanel::mouseMoved)
  EVT_LEFT_UP(wxImagePanel::mouseReleased)
  EVT_RIGHT_DOWN(wxImagePanel::rightClick)
  EVT_LEAVE_WINDOW(wxImagePanel::mouseLeftWindow)
@@ -30,17 +31,24 @@ END_EVENT_TABLE()
  void wxImagePanel::keyPressed(wxKeyEvent& event) {}
  void wxImagePanel::keyReleased(wxKeyEvent& event) {}
  */
+ wxImagePanel::wxImagePanel(wxFrame* parent, int size_x, int size_y, int grid_x, int grid_y, std::function<void(uint8_t, uint8_t)> notify_click) : wxPanel(parent), grid_x(grid_x), grid_y(grid_y), notify_click(notify_click)
+ {
+     wxImage image;
+     original_image = image;
+ }
  
-wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y) : wxPanel(parent), pos_x(0), pos_y(0)
+wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int grid_x, int grid_y, std::function<void(uint8_t, uint8_t)> notify_click) : wxPanel(parent), pos_x(0), pos_y(0), grid_x(grid_x), grid_y(grid_y), notify_click(notify_click)
 {
     // load the file... ideally add a check to see if loading was successful
+    wxImage image;
     image.LoadFile(file);
     original_image = image;
     image.Rescale(size_x, size_y, wxIMAGE_QUALITY_NORMAL);
 }
 
-wxImagePanel::wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int pos_x, int pos_y): wxPanel(parent), pos_x(pos_x), pos_y(pos_y)
+wxImagePanel::wxImagePanel::wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y, int pos_x, int pos_y, int grid_x, int grid_y, std::function<void(uint8_t, uint8_t)> notify_click): wxPanel(parent), pos_x(pos_x), pos_y(pos_y), grid_x(grid_x), grid_y(grid_y), notify_click(notify_click)
 {
+    wxImage image;
     image.LoadFile(file);
     original_image = image;
     image.Rescale(size_x, size_y, wxIMAGE_QUALITY_NORMAL);
@@ -82,6 +90,9 @@ void wxImagePanel::paintNow()
  */
 void wxImagePanel::render(wxDC&  dc)
 {
+    if(!original_image.IsOk()) return;
+    
+    wxImage image;
     image = original_image;
     if(this->GetSize().GetWidth() > 0 && this->GetSize().GetHeight() > 0) {
         image.Rescale(this->GetSize().GetWidth(), this->GetSize().GetHeight(), wxIMAGE_QUALITY_NORMAL);
@@ -105,3 +116,6 @@ int wxImagePanel::getRenderPositionY()
     return pos_y;
 }
 
+void wxImagePanel::mouseDown(wxMouseEvent& event){
+    notify_click(this->grid_x, this->grid_y);
+}

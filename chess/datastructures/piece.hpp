@@ -34,7 +34,7 @@ class piece {
   }
 
   bool is_white() {
-    return (c == WHITE);
+    return (c == piece_color::WHITE);
   }
   
   bool is_valid() {
