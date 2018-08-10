@@ -1,5 +1,39 @@
 #include "move_generation.hpp"
 #include "assert.h"
+#include "../datastructures/enums.hpp"
+
+std::vector<move> move_generation::generate_all_moves(board& b, piece_color to_move, bool check_for_check)
+{
+    std::vector<move> moves;
+    moves.reserve(80); // too many, but who cares... ;-)
+    
+    if(check_for_check)
+        std::cout << "Checking for checks!" << std::endl;
+    
+    bit_matrix bm = b.get_bit_matrix_for_color(to_move);
+    for(uint8_t y = 0; y < 8; ++y) {
+        for(uint8_t x = 0; x < 8; ++x) {
+            if(bm.get_bit_at(x, y)) {
+                piece p = b.get_piece(x, y);
+                if(p.get_piece_color() != to_move)
+                    std::cout << "WE DONE GOOFED" << std::endl;
+                if(!p.is_valid())
+                    continue;
+                std::vector<move> piece_moves = generate_moves(p, x, y, b, check_for_check);
+                if(check_for_check && !piece_moves.empty()) {
+                    std::cout << "We found a check position: From (" << (int)piece_moves[0].from_x << "," << (int)piece_moves[0].from_y << ") to (" << (int)piece_moves[0].to_x << "," << (int)piece_moves[0].to_y << ")" << std::endl;
+                    return piece_moves;
+                }
+                else if(!piece_moves.empty())
+                    moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
+            }
+        }
+    }
+    
+    std::cout << "Found no checks, yay!" << std::endl;
+    return moves;
+}
+
 
 std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, std::shared_ptr<game_history> gh)
 {    
@@ -8,7 +42,7 @@ std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, u
     return generate_moves(mover, from_x, from_y, gh->curr_board);
 }
 
-std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b)
+std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b, bool check_for_check)
 {
     // TODO: Generates only pseudo-legal moves!
     assert(mover.is_valid());
@@ -17,42 +51,42 @@ std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, u
         case KNIGHT: {
             std::vector<move> moves;
             moves.reserve(8);
-            knightmoves(mover, from_x, from_y, b, moves);
+            knightmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
         case KING: {
             std::vector<move> moves;
             moves.reserve(8);
-            kingmoves(mover, from_x, from_y, b, moves);
+            kingmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
         case BISHOP: {
             std::vector<move> moves;
             moves.reserve(14);
-            bishopmoves(mover, from_x, from_y, b, moves);
+            bishopmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
         case ROOK: {
             std::vector<move> moves;
             moves.reserve(14);
-            rookmoves(mover, from_x, from_y, b, moves);
+            rookmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
         case PAWN: {
             std::vector<move> moves;
             moves.reserve(4);
-            pawnmoves(mover, from_x, from_y, b, moves);
+            pawnmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
         case QUEEN: {
             std::vector<move> moves;
             moves.reserve(28);
-            queenmoves(mover, from_x, from_y, b, moves);
+            queenmoves(mover, from_x, from_y, b, moves, check_for_check);
             return moves;
             break;
         }
@@ -63,7 +97,7 @@ std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, u
     }
 }
 
-void move_generation::knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == KNIGHT);
     for(int8_t x = -2; x <= 2; ++x) {
@@ -76,18 +110,23 @@ void move_generation::knightmoves(piece mover, uint8_t from_x, uint8_t from_y, b
             auto p = b.get_piece(from_x + x, from_y + y);
             move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), MOVE};
             if(p.is_valid() && (p.get_piece_color() != mover.get_piece_color())) {
-                m.type == CAPTURE;
-                if(!is_check(b, m))
+                m.type = CAPTURE;
+                if(check_for_check && p.get_piece_type() == KING) {
+                    // doesn't matter that this is a capturing move an we return a standard move, we just want to find the first king capture
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!check_for_check && !is_check(b, m))
                     moves.push_back(m);
             } else if(!p.is_valid()) {
-                if(!is_check(b, m))
+                if(!check_for_check && !is_check(b, m))
                     moves.push_back(m);
             }
         }
     }
 }
 
-void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == KING);
     for(int8_t x = -1; x <= 1; ++x) {
@@ -100,25 +139,29 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             auto p = b.get_piece(from_x + x, from_y + y);
             if((p.is_valid() && p.get_piece_color() != mover.get_piece_color())) {
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), CAPTURE};
-                if(!is_check(b, m))                    
+                if(check_for_check && p.get_piece_type() == KING) {
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!check_for_check && !is_check(b, m))                    
                     moves.push_back(m);
             } else if (!p.is_valid()) {
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), MOVE};
-                if(!is_check(b, m))
+                if(!check_for_check && !is_check(b, m))
                     moves.push_back(m);
             }
         }
     }
 }
 
-void move_generation::bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == BISHOP || mover.get_piece_type() == QUEEN);
     
     // TODO: FANCY FAIRY MAGIC STUFF HAPPENING HERE
 }
 
-void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == ROOK || mover.get_piece_type() == QUEEN);
     
@@ -136,7 +179,11 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, CAPTURE};
-                if(!is_check(b, m))
+                if(check_for_check) {
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!is_check(b, m))
                     moves.push_back(m);
                 stopped[0] = true;
             } else {
@@ -144,7 +191,7 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             }                
           } else {
               move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, MOVE};
-              if(!is_check(b, m))
+              if(!check_for_check && !is_check(b, m))
                   moves.push_back(m);
           }
         }
@@ -156,7 +203,11 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, CAPTURE};
-                if(!is_check(b, m))
+                if(check_for_check) {
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!is_check(b, m))
                     moves.push_back(m);
                 stopped[1] = true;
             } else {
@@ -164,7 +215,7 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             }                
           } else {
               move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, MOVE};
-              if(!is_check(b, m))
+              if(!check_for_check && !is_check(b, m))
                 moves.push_back(m); 
           }
         }
@@ -176,7 +227,11 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
                 move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), CAPTURE};
-                if(!is_check(b, m))
+                if(check_for_check) {
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!is_check(b, m))
                     moves.push_back(m);
                 stopped[2] = true;
             } else {
@@ -184,7 +239,7 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             }                
           } else {
               move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), MOVE};
-              if(!is_check(b, m)) 
+              if(!check_for_check && !is_check(b, m)) 
                 moves.push_back(m); 
           }
         }
@@ -196,7 +251,11 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
                 move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), CAPTURE};
-                if(!is_check(b, m))
+                if(check_for_check) {
+                    moves.push_back(m);
+                    return;
+                }
+                else if(!is_check(b, m))
                     moves.push_back(m);
                 stopped[3] = true;
             } else {
@@ -204,7 +263,7 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             }                
           } else {
               move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), MOVE};
-              if(!is_check(b, m))
+              if(!check_for_check && !is_check(b, m))
                 moves.push_back(m);
           }
         }
@@ -217,20 +276,23 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
     
 
 
-void move_generation::queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == QUEEN);
     rookmoves(mover, from_x, from_y, b, moves);
+    if(check_for_check && !moves.empty())
+        return;
     bishopmoves(mover, from_x, from_y, b, moves);
 }
 
-void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
+void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
 {
     assert(mover.get_piece_type() == PAWN);
     
-    int8_t y, starting_y;
+    int8_t y, starting_y, promotion_y;
     y = mover.get_piece_color() == piece_color::WHITE ? 1 : -1;
     starting_y = mover.get_piece_color() == piece_color::WHITE ? 1 : 6;
+    promotion_y = mover.get_piece_color() == piece_color::WHITE ? 7 : 0;
     
     //check possible capture moves
     //we don't have to boundary check y here, since a pawn on the last file gets promoted (and can't move backwards)
@@ -239,17 +301,24 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             piece p = b.get_piece(from_x + x, from_y + y);
             if(p.is_valid() && p.get_piece_color() != mover.get_piece_color())
             {
-                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), CAPTURE};
-                if(!is_check(b, m))
+                move_type mtype = from_y + y == promotion_y ? CAPTURING_PROMOTION : CAPTURE;
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), mtype};
+                if(check_for_check && p.get_piece_type() == KING) 
+                    moves.push_back(m);
+                else if(!check_for_check && !is_check(b, m))
                     moves.push_back(m);
             }
         }
     }
     
+    //we checked capturing moves, so nothing to do left if checking for king captures
+    if(check_for_check) return;
+    
     //check occupancy for tile ahead of piece
     piece p = b.get_piece(from_x, from_y + y);
     if(!p.is_valid()) {
-        move m = (move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y), MOVE};
+        move_type mtype = from_y + y == promotion_y ? PROMOTION : MOVE;
+        move m = (move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y), mtype};
         if(is_check(b, m))
             return;
         moves.push_back(m);
@@ -268,12 +337,14 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
 bool move_generation::is_check(board& b, move m)
 {
     // TODO: finish implementation
-    /*
+    
     board new_board = b;
     switch(m.type) {
         case MOVE:
+            new_board.move_piece(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
             break;
         case CAPTURE:
+            new_board.move_piece(m.mover, m.from_x, m.from_y, new_board.get_piece(m.to_x, m.to_y), m.to_x, m.to_y);
             break;
         case CASTLING:
             break;
@@ -281,8 +352,15 @@ bool move_generation::is_check(board& b, move m)
             break;
         case PROMOTION:
             break;
-    }*/
-    return false;
+        case CAPTURING_PROMOTION:
+            break;
+        default:
+            return false;
+            break;
+    }
+    piece_color to_move = m.mover.get_piece_color() == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
+    std::vector<move> moves = generate_all_moves(new_board, to_move, true);
+    return !moves.empty();
 }
 
 
