@@ -2,6 +2,7 @@
 #include "MainFrame.hpp"
 #include "../engine/engine.hpp"
 #include "../datastructures/consts.hpp"
+#include <algorithm>
 
 MainApp::~MainApp() {
     if(panels != NULL) {
