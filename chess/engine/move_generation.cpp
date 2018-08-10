@@ -115,7 +115,48 @@ void move_generation::bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, b
 {
     assert(mover.get_piece_type() == BISHOP || mover.get_piece_type() == QUEEN);
     
-    // TODO: FANCY FAIRY MAGIC STUFF HAPPENING HERE
+    bool stopped[4] = {false}; /* upper-left, lower-left, upper-right, lower-right */
+    int8_t x_diff = 1;
+    int8_t y_diff = 1;
+    while(((((int8_t) from_x) - x_diff >= 0) && (((int8_t) from_x) + x_diff <= 7)) 
+        || ((((int8_t) from_x) - x_diff >= 0) && (((int8_t) from_x) - x_diff >= 0)) 
+        || ((((int8_t) from_x) + x_diff <=7) && (((int8_t) from_x) + x_diff <= 7))  
+        || ((((int8_t) from_x) + x_diff <= 7) && (((int8_t) from_x) - x_diff >= 0)) ) {
+     
+        // upper-left
+        bishopmove_helper(mover, b, &stopped[0], from_x, from_y, (int8_t) from_x - x_diff, (int8_t) from_y + y_diff, moves);
+
+        // lower-left
+        bishopmove_helper(mover, b, &stopped[1], from_x, from_y, (int8_t) from_x - x_diff, (int8_t) from_y - y_diff, moves);
+        
+        // upper-right
+        bishopmove_helper(mover, b, &stopped[2], from_x, from_y, (int8_t) from_x + x_diff, (int8_t) from_y + y_diff, moves);
+        
+        // lower-right
+        bishopmove_helper(mover, b, &stopped[3], from_x, from_y, (int8_t) from_x + x_diff, (int8_t) from_y - y_diff, moves);
+         
+        ++x_diff;
+        ++y_diff;
+    }
+}
+// TODO_: FIX STOPPED
+void move_generation::bishopmove_helper(piece& mover, board& b, bool* stopped, uint8_t from_x, uint8_t from_y, int8_t x_diff, int8_t y_diff, std::vector<move>& moves) {
+    if(!*stopped && x_diff >= 0 && x_diff <=7 && y_diff >=0 &&y_diff <=7) {
+        piece p = b.get_piece(x_diff, y_diff);
+        if(p.is_valid()) {         
+        piece_color p_col = p.get_piece_color();
+        if(p_col != mover.get_piece_color()) {
+            move m = (move) {mover, from_x, from_y, (uint8_t)x_diff, (uint8_t)y_diff, CAPTURE};
+            if(!is_check(b, m))
+                moves.push_back(m);
+        }
+        *stopped = true;                
+        } else {
+            move m = (move) {mover, from_x, from_y, (uint8_t)x_diff, (uint8_t)y_diff, MOVE};
+            if(!is_check(b, m))
+                moves.push_back(m);
+        }
+    }
 }
 
 void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
@@ -124,10 +165,10 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
     
     piece_color mover_color = mover.get_piece_color();
     bool stopped[4] = {false}; /* x-left, x-right, y-down, y-up */
-    uint8_t x_diff = 1;
-    uint8_t y_diff = 1;
+    int8_t x_diff = 1;
+    int8_t y_diff = 1;
     
-    while((from_x - x_diff >= 0) || (from_x + x_diff <= 7) || (from_y - y_diff >= 0) || (from_y + y_diff <= 7)) {
+    while((((int8_t) from_x) - x_diff >= 0) || (((int8_t) from_x) + x_diff <= 7) || (((int8_t) from_y) - y_diff >= 0) || (((int8_t) from_y) + y_diff <= 7)) {
         
         // x-left
         if(!stopped[0] && (int8_t) from_x - x_diff >= 0) {
@@ -138,10 +179,8 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, CAPTURE};
                 if(!is_check(b, m))
                     moves.push_back(m);
-                stopped[0] = true;
-            } else {
-                stopped[0] = true;   
-            }                
+            } 
+            stopped[0] = true;   
           } else {
               move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, MOVE};
               if(!is_check(b, m))
@@ -158,10 +197,8 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, CAPTURE};
                 if(!is_check(b, m))
                     moves.push_back(m);
-                stopped[1] = true;
-            } else {
-                stopped[1] = true;   
-            }                
+            }     
+            stopped[1] = true;  
           } else {
               move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, MOVE};
               if(!is_check(b, m))
@@ -178,10 +215,8 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), CAPTURE};
                 if(!is_check(b, m))
                     moves.push_back(m);
-                stopped[2] = true;
-            } else {
-                stopped[2] = true;   
-            }                
+            } 
+            stopped[2] = true;   
           } else {
               move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), MOVE};
               if(!is_check(b, m)) 
@@ -198,10 +233,8 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), CAPTURE};
                 if(!is_check(b, m))
                     moves.push_back(m);
-                stopped[3] = true;
-            } else {
-                stopped[3] = true;   
-            }                
+            }
+            stopped[3] = true;   
           } else {
               move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), MOVE};
               if(!is_check(b, m))
@@ -211,12 +244,8 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
         ++x_diff;
         ++y_diff;
     }
-        
 }
-    
-    
-
-
+      
 void move_generation::queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves)
 {
     assert(mover.get_piece_type() == QUEEN);
