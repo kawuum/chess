@@ -17,6 +17,7 @@ class move_generation {
     bool is_check(board& b, move m);
   private:
     void bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
+    void bishopmove_helper(piece& mover, board& b, bool* stopped, uint8_t from_x, uint8_t from_y, int8_t x_diff, int8_t y_diff, std::vector<move>& moves);
     void rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
     void pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
     void knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
