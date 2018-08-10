@@ -22,6 +22,8 @@ class move_generation {
     void knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
     void kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
     void queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void bishopmoves_helper(piece& mover, board& b, bool* stopped, uint8_t from_x, uint8_t from_y, int8_t x_diff, int8_t y_diff, std::vector<move>& moves);
+    void rookmoves_helper(piece& mover, board& b, bool* stopped, uint8_t from_x, uint8_t from_y, int8_t x_diff, int8_t y_diff, std::vector<move>& moves);
 };
 
 #endif
