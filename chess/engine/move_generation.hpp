@@ -11,17 +11,17 @@
 class move_generation {
   public:
     std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, std::shared_ptr<game_history> gh);
-    std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b);
-    std::vector<move> generate_all_moves(board& b, piece_color to_move);
+    std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b, bool check_for_check = false);
+    std::vector<move> generate_all_moves(board& b, piece_color to_move, bool check_for_check = false);
     std::vector<move> generate_all_moves(game_history gh);
     bool is_check(board& b, move m);
   private:
-    void bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
-    void rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
-    void pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
-    void knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
-    void kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
-    void queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
+    void bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
+    void queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check = false);
 };
 
 #endif

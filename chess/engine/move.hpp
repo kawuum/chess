@@ -10,7 +10,7 @@ enum move_type {
     ENPASSANT,
     CASTLING,
     PROMOTION,
-    CAPTURNG_PROMOTION
+    CAPTURING_PROMOTION
 };
 
 struct move {
