@@ -116,7 +116,6 @@ void MainApp::notify_click(uint8_t x_coord, uint8_t y_coord) {
             clicked = false; 
             eng->perform_move(*clicked_move);
             draw_board(eng->get_current_board());
-            std::cout << "WE ARE GREAT" << std::endl;
          }
      }
         
