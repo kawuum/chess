@@ -14,6 +14,7 @@ class move_generation {
     std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b);
     std::vector<move> generate_all_moves(board& b, piece_color to_move);
     std::vector<move> generate_all_moves(game_history gh);
+    bool is_check(board& b, move m);
   private:
     void bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
     void rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves);
