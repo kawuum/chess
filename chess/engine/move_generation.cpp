@@ -74,10 +74,14 @@ void move_generation::knightmoves(piece mover, uint8_t from_x, uint8_t from_y, b
                 continue;
             //check occupancy, if not occupied by friendly piece, add move to vector
             auto p = b.get_piece(from_x + x, from_y + y);
+            move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), MOVE};
             if(p.is_valid() && (p.get_piece_color() != mover.get_piece_color())) {
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+                m.type == CAPTURE;
+                if(!is_check(b, m))
+                    moves.push_back(m);
             } else if(!p.is_valid()) {
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+                if(!is_check(b, m))
+                    moves.push_back(m);
             }
         }
     }
@@ -94,8 +98,14 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                 continue;
             //check occupancy, if not occupied by friendly piece, add move to vector
             auto p = b.get_piece(from_x + x, from_y + y);
-            if(!p.is_valid() || (p.is_valid() && p.get_piece_color() != mover.get_piece_color())) {
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+            if((p.is_valid() && p.get_piece_color() != mover.get_piece_color())) {
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), CAPTURE};
+                if(!is_check(b, m))                    
+                    moves.push_back(m);
+            } else if (!p.is_valid()) {
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), MOVE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
             }
         }
     }
@@ -125,13 +135,17 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
          if(p.is_valid()) {         
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y});
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, CAPTURE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
                 stopped[0] = true;
             } else {
                 stopped[0] = true;   
             }                
           } else {
-            moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y});
+              move m = (move) {mover, from_x, from_y, (uint8_t)(from_x - x_diff), from_y, MOVE};
+              if(!is_check(b, m))
+                  moves.push_back(m);
           }
         }
         
@@ -141,13 +155,17 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
          if(p.is_valid()) {         
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y});
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, CAPTURE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
                 stopped[1] = true;
             } else {
                 stopped[1] = true;   
             }                
           } else {
-              moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y}); 
+              move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x_diff), from_y, MOVE};
+              if(!is_check(b, m))
+                moves.push_back(m); 
           }
         }
         
@@ -157,13 +175,17 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
          if(p.is_valid()) {
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
-                moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff)});
+                move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), CAPTURE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
                 stopped[2] = true;
             } else {
                 stopped[2] = true;   
             }                
           } else {
-              moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff)}); 
+              move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y - y_diff), MOVE};
+              if(!is_check(b, m)) 
+                moves.push_back(m); 
           }
         }
         
@@ -173,13 +195,17 @@ void move_generation::rookmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
          if(p.is_valid()) {
             piece_color p_col = p.get_piece_color();
             if(p_col != mover_color) {
-                moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff)});
+                move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), CAPTURE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
                 stopped[3] = true;
             } else {
                 stopped[3] = true;   
             }                
           } else {
-              moves.push_back((move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff)});
+              move m = (move) {mover, from_x, from_y, from_x, (uint8_t)(from_y + y_diff), MOVE};
+              if(!is_check(b, m))
+                moves.push_back(m);
           }
         }
         ++x_diff;
@@ -212,21 +238,52 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
         if((from_x + x >= 0) && (from_x + x <= 7)) {
             piece p = b.get_piece(from_x + x, from_y + y);
             if(p.is_valid() && p.get_piece_color() != mover.get_piece_color())
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y)});
+            {
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), CAPTURE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
+            }
         }
     }
     
     //check occupancy for tile ahead of piece
     piece p = b.get_piece(from_x, from_y + y);
     if(!p.is_valid()) {
-        moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y)});
+        move m = (move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y), MOVE};
+        if(is_check(b, m))
+            return;
+        moves.push_back(m);
         //check if we are still on the starting file
         if(from_y == starting_y) {
             p = b.get_piece(from_x, from_y + 2*y);
             if(!p.is_valid())
-                moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y*2)});
+            {
+                m = (move) {mover, from_x, from_y, (uint8_t)(from_x), (uint8_t)(from_y + y*2), MOVE};
+                if(!is_check(b, m))
+                    moves.push_back(m);
+            }
         }
     }
 }
+bool move_generation::is_check(board& b, move m)
+{
+    // TODO: finish implementation
+    /*
+    board new_board = b;
+    switch(m.type) {
+        case MOVE:
+            break;
+        case CAPTURE:
+            break;
+        case CASTLING:
+            break;
+        case ENPASSANT:
+            break;
+        case PROMOTION:
+            break;
+    }*/
+    return false;
+}
+
 
 

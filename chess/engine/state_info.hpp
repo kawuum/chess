@@ -2,14 +2,14 @@
 
 #ifndef STATEINFO_HPP
 #define STATEINFO_HPP
-
+/*
 enum move_type {
     MOVE,
     CAPTURE,
     ENPASSANT,
     CASTLING,
     PROMOTION
-};
+};*/
 
 struct move {
   piece moved_piece;
