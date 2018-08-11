@@ -22,23 +22,6 @@ class engine
      */
     void new_game(std::string fen);
     /**
-     * Performs a move given only the originating and target coordinates.
-     * @param from_x x coordinate of moving piece
-     * @param from_y y coordinate of moving piece
-     * @param to_x x coordinate of target square
-     * @param to_y y coordinate of target square
-     */
-    void perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
-    /**
-     * Performs a move given the moving piece, its originating coordinates and the coordinates of the target square.
-     * @param p The piece to move
-     * @param from_x x coordinate of moving piece
-     * @param from_y y coordinate of moving piece
-     * @param to_x x coordinate of target square
-     * @param to_y y coordinate of target square
-     */
-    void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
-    /**
      * Performs a move given the move to be performed.
      * @param m The move to be performed
      */
@@ -71,6 +54,24 @@ class engine
      */
     game_history get_current_gamestate();
   private:
+    /**
+     * Performs a move given only the originating and target coordinates.
+     * @param from_x x coordinate of moving piece
+     * @param from_y y coordinate of moving piece
+     * @param to_x x coordinate of target square
+     * @param to_y y coordinate of target square
+     */
+    void perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
+    /**
+     * Performs a move given the moving piece, its originating coordinates and the coordinates of the target square.
+     * @param p The piece to move
+     * @param from_x x coordinate of moving piece
+     * @param from_y y coordinate of moving piece
+     * @param to_x x coordinate of target square
+     * @param to_y y coordinate of target square
+     * @param mt The type of move to be performed
+     */
+    void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt);
     std::shared_ptr<game_history> gh;
 };
 

@@ -46,7 +46,8 @@ void engine::new_game()
 
 void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
 {
-    this->perform_move(this->gh->curr_board.get_piece(from_x, from_y), from_x, from_y, to_x, to_y);
+    // FIXME GUESSING MOVE_TYPE HERE, BAD IDEA!!
+    this->perform_move(this->gh->curr_board.get_piece(from_x, from_y), from_x, from_y, to_x, to_y, move_type::MOVE);
 }
 
 std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_y) {
@@ -54,7 +55,7 @@ std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_
     return mg.generate_moves(p, from_x, from_y, this->gh);
 }
 
-void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y)
+void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt)
 {
     // TODO: CHECK IF MOVE IS LEGAL
     // TODO: Possible memory leaks...
@@ -79,15 +80,20 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     if(pie.get_piece_type() == PAWN && (std::abs(from_y - to_y) == 2)) {
         // A pawn is getting moved. Since this is a double jump, we need to add an en passant square.
         new_gm->ep_square = std::make_tuple(to_x, (pie.get_piece_color() == piece_color::WHITE ? to_y - 1 : to_y + 1));
-        std::cout << "Adding ep square: (" << (int)to_x << "," << (int)std::get<1>(new_gm->ep_square) << ")" << std::endl;
     }
     
     new_gm->curr_board = this->gh->curr_board;  
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
     piece captured_piece = this->gh->curr_board.get_piece(to_x, to_y);
-    if(captured_piece.is_valid()) {
+    if(captured_piece.is_valid() && mt != ENPASSANT) {
         new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);
-    }  
+    } else if(mt == ENPASSANT) {
+        std::cout << "Removing ENPASSANT pawn at " << (int)std::get<0>(this->gh->ep_square) << "," << (int)std::get<1>(this->gh->ep_square) << std::endl;
+        piece ep_piece = this->gh->curr_board.get_piece(std::get<0>(this->gh->ep_square), from_y);
+        std::cout << "Got the pawn to remove..." << std::endl;
+        new_gm->curr_board.remove_piece(ep_piece, std::get<0>(this->gh->ep_square), from_y);
+        std::cout << "...and removed it" << std::endl;
+    }
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
     new_gm->castlingrights[0] = this->gh->castlingrights[0];
     new_gm->castlingrights[1] = this->gh->castlingrights[1];
@@ -130,7 +136,7 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
 
 void engine::perform_move(move m)
 {
-    perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
+    perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type);
 }
 
 board& engine::get_current_board() {

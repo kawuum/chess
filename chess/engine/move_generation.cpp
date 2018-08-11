@@ -2,9 +2,14 @@
 #include "assert.h"
 #include "../datastructures/enums.hpp"
 
+std::vector<move> move_generation::generate_all_moves(game_history gh)
+{
+    return generate_all_moves(gh.curr_board, gh.to_move, false);
+}
+
+
 std::vector<move> move_generation::generate_all_moves(board& b, piece_color to_move, bool check_for_check)
 {
-
     std::vector<move> moves;
     moves.reserve(80); // too many, but who cares... ;-)
     
@@ -35,6 +40,7 @@ std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x, u
 {    
     assert(mover.is_valid());
     assert(mover.get_piece_color() == gh->to_move);
+    this->gamestate = *gh;
     return generate_moves(mover, from_x, from_y, gh->curr_board, false);
 }
 
@@ -296,6 +302,12 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             {
                 move_type mtype = from_y + y == promotion_y ? CAPTURING_PROMOTION : CAPTURE;
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), mtype};
+                if(check_for_check && p.get_piece_type() == KING) 
+                    moves.push_back(m);
+                else if(!check_for_check && !is_check(b, m))
+                    moves.push_back(m);
+            } else if ((std::get<0>(this->gamestate.ep_square) == (from_x + x)) && (std::get<1>(this->gamestate.ep_square) == (from_y + y))) {
+                move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), ENPASSANT};
                 if(check_for_check && p.get_piece_type() == KING) 
                     moves.push_back(m);
                 else if(!check_for_check && !is_check(b, m))
