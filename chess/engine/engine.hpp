@@ -12,7 +12,14 @@ class engine
 {
   public:
     engine() { }
+    /**
+     * Resets game state to start a new standard chess game.
+     */
     void new_game();
+    /**
+     * Resets game state to start a new chess game given the according FEN string.
+     * @param fen The Forsyth-Edwards-Notation of the game that should be started.
+     */
     void new_game(std::string fen);
     void perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
     void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y);
@@ -21,6 +28,7 @@ class engine
     piece_color get_color_to_move();
     std::vector<move> get_legal_moves(piece p, uint8_t from_x, uint8_t from_y);
     board& get_current_board();
+    game_history get_current_gamestate();
   private:
     std::shared_ptr<game_history> gh;
 };
