@@ -84,6 +84,16 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     
     new_gm->curr_board = this->gh->curr_board;  
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
+    if(mt == CASTLING) {
+        //also move rook
+        if(from_x > to_x) {
+            // long castle
+            new_gm->curr_board.move_piece(piece(ROOK, pie.get_piece_color()), 0, from_y, 3, to_y);
+        } else {
+            // short castle
+            new_gm->curr_board.move_piece(piece(ROOK, pie.get_piece_color()), 7, from_y, 5, to_y);
+        }
+    }
     piece captured_piece = this->gh->curr_board.get_piece(to_x, to_y);
     if(captured_piece.is_valid() && mt != ENPASSANT) {
         new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);

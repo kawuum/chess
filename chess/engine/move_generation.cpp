@@ -154,6 +154,55 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             }
         }
     }
+    
+    // check castling options
+    castling_rights cr = this->gamestate.castlingrights[(int)mover.get_piece_color()];
+    if(this->gamestate.castlingrights[(int)mover.get_piece_color()] != NONE && !check_for_check) {
+        if(cr == BOTH || cr == SHORT) {
+            // check if short castling is available
+            // 1. no piece between king and rook
+            // 2. none of the squares the king touches are under attack (king not in check before/after and squares between from and to square not under attack)
+            for(uint8_t x = from_x; x <= 7; ++x) {
+                if(x == from_x) {
+                    // originating square, only check for check
+                    if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
+                        break;
+                } else if (x == 7) {
+                    // rook square, do we need to check for check here?
+                    // since this is the last square, we can add the castling move here
+                    moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + 2), from_y, CASTLING});
+                } else {
+                    // in between squares... check if empty and for check
+                    if(b.get_piece(x, from_y).is_valid())
+                        break;
+                    if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
+                        break;
+                }
+            }
+        }
+        if(cr == BOTH || cr == LONG) {
+            // check if long castling is available
+            // 1. no piece between king and rook
+            // 2. none of the squares the king touches are under attack (king not in check before/after and squares between from and to square not under attack)
+            for(uint8_t x = from_x; x >= 0; --x) {
+                if(x == from_x) {
+                    // originating square, only check for check
+                    if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
+                        break;
+                } else if (x == 0) {
+                    // rook square, do we need to check for check here?
+                    // since this is the last square, we can add the castling move here
+                    moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - 2), from_y, CASTLING});
+                } else {
+                    // in between squares... check if empty and for check
+                    if(b.get_piece(x, from_y).is_valid())
+                        break;
+                    if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
+                        break;
+                }
+            }
+        }
+    }
 }
 
 void move_generation::bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b, std::vector<move>& moves, bool check_for_check)
