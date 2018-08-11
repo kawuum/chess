@@ -10,6 +10,7 @@ struct game_history {
     board curr_board;
     std::shared_ptr<game_history> prev;
     piece_color to_move;
+    castling_rights castlingrights[2];
 };
 
 #endif

@@ -17,6 +17,6 @@ enum castling_rights {
     SHORT = 1,
     LONG = 2,
     BOTH = 3
-}
+};
 
 #endif //CHESS_ENUMS_HPP

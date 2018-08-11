@@ -76,7 +76,7 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
         
     std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
     
-    //TODO: if moved piece is king or rook, change castlingrights accordingly
+    //TODO: if moved piece is rook, change castlingrights accordingly
     
     new_gm->curr_board = this->gh->curr_board;  
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
@@ -85,8 +85,11 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
         new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);
     }  
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
+    if(pie.get_piece_type() == KING)
+        new_gm->castlingrights[(int)this->gh->to_move] = NONE;
     new_gm->to_move = this->gh->to_move == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
     new_gm->prev = this->gh;
+    
     this->gh = new_gm;
 }
 
