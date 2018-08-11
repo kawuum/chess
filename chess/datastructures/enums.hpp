@@ -12,4 +12,11 @@ enum class piece_color {
   WHITE, BLACK
 };
 
+enum castling_rights {
+    NONE = 0,
+    SHORT = 1,
+    LONG = 2,
+    BOTH = 3
+}
+
 #endif //CHESS_ENUMS_HPP

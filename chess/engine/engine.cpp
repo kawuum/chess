@@ -7,6 +7,8 @@ void engine::new_game()
     this->gh = std::make_shared<game_history>();
     this->gh->num_halfmoves = 0;
     this->gh->to_move = piece_color::WHITE;
+    this->gh->castlingrights[(int)piece_color::WHITE] = BOTH;
+    this->gh->castlingrights[(int)piece_color::BLACK] = BOTH;
     this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
     this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
     this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 2, 0);
@@ -73,6 +75,8 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     */
         
     std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
+    
+    //TODO: if moved piece is king or rook, change castlingrights accordingly
     
     new_gm->curr_board = this->gh->curr_board;  
     new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);

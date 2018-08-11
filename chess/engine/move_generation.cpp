@@ -27,7 +27,6 @@ std::vector<move> move_generation::generate_all_moves(board& b, piece_color to_m
         }
     }
 
-    std::cout << "Found no checks, yay!" << std::endl;
     return moves;
 }
 
