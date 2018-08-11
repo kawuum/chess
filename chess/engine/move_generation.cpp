@@ -168,7 +168,7 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                     if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
                         break;
                 } else if (x == 7) {
-                    // rook square, do we need to check for check here?
+                    // rook square, no need to check for check here
                     // since this is the last square, we can add the castling move here
                     moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x + 2), from_y, CASTLING});
                 } else {
@@ -184,13 +184,13 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
             // check if long castling is available
             // 1. no piece between king and rook
             // 2. none of the squares the king touches are under attack (king not in check before/after and squares between from and to square not under attack)
-            for(uint8_t x = from_x; x >= 0; --x) {
+            for(uint8_t x = from_x; x >= 1; --x) {
                 if(x == from_x) {
                     // originating square, only check for check
                     if(!check_for_check && is_check(b, (move) {mover, from_x, from_y, x, from_y, MOVE}))
                         break;
-                } else if (x == 0) {
-                    // rook square, do we need to check for check here?
+                } else if (x == 1) {
+                    // last square before rook square, no need to check for check here
                     // since this is the last square, we can add the castling move here
                     moves.push_back((move) {mover, from_x, from_y, (uint8_t)(from_x - 2), from_y, CASTLING});
                 } else {
