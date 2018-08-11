@@ -11,6 +11,7 @@ struct game_history {
     std::shared_ptr<game_history> prev;
     piece_color to_move;
     castling_rights castlingrights[2];
+    std::tuple<uint8_t, uint8_t> ep_square;
 };
 
 #endif
