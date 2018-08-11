@@ -85,8 +85,45 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
         new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);
     }  
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
-    if(pie.get_piece_type() == KING)
+    new_gm->castlingrights[0] = this->gh->castlingrights[0];
+    new_gm->castlingrights[1] = this->gh->castlingrights[1];
+    castling_rights cr = this->gh->castlingrights[(int)this->gh->to_move];
+    // handling castling privileges
+    std::cout << "Still some castling rights left: " << (int)(cr != NONE) << " rights left: " << (int)cr << std::endl;
+    if(pie.get_piece_type() == KING) {
+        std::cout << (this->gh->to_move == piece_color::WHITE ? "White" : "Black") << " lost all castling rights" << std::endl;
         new_gm->castlingrights[(int)this->gh->to_move] = NONE;
+    }
+    if((pie.get_piece_type() == ROOK && cr != NONE) || (captured_piece.get_piece_type() == ROOK && this->gh->castlingrights[(int)captured_piece.get_piece_color()] != NONE)) {
+        std::cout << "A rook was moved or captured, we need to modify castling rights" << std::endl;
+        uint8_t starting_y = this->gh->to_move == piece_color::WHITE ? 0 : 7;
+        if(from_y == starting_y) {
+            if(from_x == 0 && (cr == BOTH || cr == LONG)) {
+                // losing long castling privilege
+                std::cout << (this->gh->to_move == piece_color::WHITE ? "White" : "Black") << " lost long castling right" << std::endl;
+                cr = (castling_rights)(cr - LONG);
+            }
+            else if(from_x == 7 && (cr == BOTH || cr == SHORT)) {
+                // losing short castling privilege
+                std::cout << (this->gh->to_move == piece_color::WHITE ? "White" : "Black") << " lost short castling right" << std::endl;
+                cr = (castling_rights)(cr - SHORT);
+            }
+            new_gm->castlingrights[(int)this->gh->to_move] = cr;  
+        } else if(to_y == starting_y) {
+            // A rook was captured, we can eliminate a castling privilege here
+            cr = this->gh->castlingrights[(int)captured_piece.get_piece_color()];
+            if(to_x == 0 && (cr == BOTH || cr == LONG)) {
+                // losing long castling privilege
+                std::cout << (captured_piece.get_piece_color() == piece_color::WHITE ? "White" : "Black") << " lost long castling right" << std::endl;
+                cr = (castling_rights)(cr - LONG);
+            } else if(to_x == 7 && (cr == BOTH || cr == SHORT)) {
+                // losing short castling privilege
+                std::cout << (captured_piece.get_piece_color() == piece_color::WHITE ? "White" : "Black") << " lost short castling right" << std::endl;
+                cr = (castling_rights)(cr - SHORT);
+            }
+            new_gm->castlingrights[(int)captured_piece.get_piece_color()] = cr;  
+        }
+    }
     new_gm->to_move = this->gh->to_move == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
     new_gm->prev = this->gh;
     
@@ -111,4 +148,11 @@ void engine::undo_move()
 piece_color engine::get_color_to_move() {
     return this->gh->to_move;
 }
+
+game_history engine::get_current_gamestate()
+{
+    game_history g = *this->gh;
+    return g;
+}
+
 
