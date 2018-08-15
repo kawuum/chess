@@ -23,7 +23,6 @@ std::vector<move> move_generation::generate_all_moves(board& b, piece_color to_m
                 std::vector<move> piece_moves = generate_moves(p, x, y, b, check_for_check);
                     
                 if(check_for_check && !piece_moves.empty()) {
-                    std::cout << "We found a check position: From (" << (int)piece_moves[0].from_x << "," << (int)piece_moves[0].from_y << ") to (" << (int)piece_moves[0].to_x << "," << (int)piece_moves[0].to_y << ")" << std::endl;
                     return piece_moves;
                 }
                 else if(!piece_moves.empty())
@@ -390,9 +389,10 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
 }
 bool move_generation::is_check(board& b, move m)
 {
-    // TODO: finish implementation
+    // TODO: should we just ignore castling for check checks?
     
     board new_board = b;
+    piece_color color = m.mover.get_piece_color();
     switch(m.type) {
         case MOVE:
             new_board.move_piece(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
@@ -400,13 +400,22 @@ bool move_generation::is_check(board& b, move m)
         case CAPTURE:
             new_board.move_piece(m.mover, m.from_x, m.from_y, new_board.get_piece(m.to_x, m.to_y), m.to_x, m.to_y);
             break;
-        case CASTLING:
+        case CASTLING: 
+            new_board.move_piece(m.mover, m.from_x, m.from_y, m.to_x, m.to_y); // move king
+            new_board.move_piece(piece(ROOK, color), m.from_x > m.to_x ? 0 : 7, m.from_y, m.from_x > m.to_x ? 3 : 5, m.to_y); // move rook
             break;
         case ENPASSANT:
+            new_board.move_piece(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
+            new_board.remove_piece(new_board.get_piece(m.to_x, m.from_y), m.to_x, m.from_y); // enemy pawn always is in target X file, but in original Y file
             break;
         case PROMOTION:
+            new_board.remove_piece(m.mover, m.from_x, m.from_y);
+            new_board.add_piece(piece(QUEEN, color), m.to_x, m.to_y); // actual piece doesn't matter here
             break;
         case CAPTURING_PROMOTION:
+            new_board.remove_piece(m.to_x, m.to_y); // remove captured piece first
+            new_board.remove_piece(m.mover, m.from_x, m.from_y);
+            new_board.add_piece(piece(QUEEN, color), m.to_x, m.to_y); // actual piece doesn't matter here
             break;
         default:
             return false;
@@ -416,7 +425,6 @@ bool move_generation::is_check(board& b, move m)
     piece_color to_move = m.mover.get_piece_color() == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
     std::vector<move> moves = generate_all_moves(new_board, to_move, true);
     return !moves.empty();
-    return false;
 }
 
 

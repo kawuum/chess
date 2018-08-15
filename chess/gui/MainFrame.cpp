@@ -26,13 +26,13 @@ void MainFrame::OnExit(wxCommandEvent& event)
 }
 void MainFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox( "This is a simple, non-functional chess programm.",
+    wxMessageBox( "This is a simple, barely functional chess programm.",
                   "About Chess", wxOK | wxICON_INFORMATION );
 }
 void MainFrame::OnNewGame(wxCommandEvent& event)
 {
     //wxLogMessage("Welcome to Chess!");
-    // TODO: implement
+    
 }
 
 void MainFrame::recolor_board()
