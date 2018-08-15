@@ -98,11 +98,8 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
     if(captured_piece.is_valid() && mt != ENPASSANT) {
         new_gm->curr_board.remove_piece(captured_piece, to_x, to_y);
     } else if(mt == ENPASSANT) {
-        std::cout << "Removing ENPASSANT pawn at " << (int)std::get<0>(this->gh->ep_square) << "," << (int)std::get<1>(this->gh->ep_square) << std::endl;
         piece ep_piece = this->gh->curr_board.get_piece(std::get<0>(this->gh->ep_square), from_y);
-        std::cout << "Got the pawn to remove..." << std::endl;
         new_gm->curr_board.remove_piece(ep_piece, std::get<0>(this->gh->ep_square), from_y);
-        std::cout << "...and removed it" << std::endl;
     }
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
     new_gm->castlingrights[0] = this->gh->castlingrights[0];
@@ -113,7 +110,6 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
         new_gm->castlingrights[(int)this->gh->to_move] = NONE;
     }
     if((pie.get_piece_type() == ROOK && cr != NONE) || (captured_piece.get_piece_type() == ROOK && this->gh->castlingrights[(int)captured_piece.get_piece_color()] != NONE)) {
-        std::cout << "A rook was moved or captured, we need to modify castling rights" << std::endl;
         uint8_t starting_y = this->gh->to_move == piece_color::WHITE ? 0 : 7;
         if(from_y == starting_y) {
             if(from_x == 0 && (cr == BOTH || cr == LONG)) {
