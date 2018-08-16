@@ -155,8 +155,8 @@ void MainFrame::recolor_board() {
 void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
 
   if (!clicked) { // First time clicked, we check if the click is on a piece, else return
-    auto piece = eng->get_current_board().get_piece(x_coord, y_coord);
-    if (!piece.is_valid() || piece.get_piece_color() != eng->get_color_to_move()) {
+    auto p = eng->get_current_board().get_piece(x_coord, y_coord);
+    if (!p.is_valid() || p.get_piece_color() != eng->get_color_to_move()) {
       return;
     }
     clicked = true;
@@ -164,9 +164,9 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
 
     panels[x_coord + (8 * y_coord)]->SetBackgroundColour(BG_RED);
     panels[x_coord + (8 * y_coord)]->paintNow();
-
+    piece current_piece = eng->get_current_board().get_piece(x_coord, y_coord);
     std::vector<move>
-        possible_moves = eng->get_legal_moves(eng->get_current_board().get_piece(x_coord, y_coord), x_coord, y_coord);
+        possible_moves = eng->get_legal_moves(current_piece, x_coord, y_coord);
 
     for (auto it = possible_moves.begin(); it < possible_moves.end(); ++it) {
       panels[it->to_x + (8 * it->to_y)]->SetBackgroundColour(BG_BLUE);
@@ -180,9 +180,10 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
       this->recolor_board();
       clicked = false;
     } else {  // Check if this is a possible move click
+      piece clicked_piece = eng->get_current_board().get_piece(std::get<0>(clicked_coords),
+                                                                  std::get<1>(clicked_coords));
       std::vector<move> possible_moves =
-          eng->get_legal_moves(eng->get_current_board().get_piece(std::get<0>(clicked_coords),
-                                                                  std::get<1>(clicked_coords)),
+          eng->get_legal_moves(clicked_piece,
                                std::get<0>(clicked_coords),
                                std::get<1>(clicked_coords));
       if (possible_moves.empty()) {
