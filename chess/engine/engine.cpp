@@ -48,24 +48,24 @@ void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t 
   this->perform_move(this->gh->curr_board.get_piece(from_x, from_y), from_x, from_y, to_x, to_y, move_type::MOVE);
 }
 
-std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_y) {
+std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y) {
   move_generation mg;
   return mg.generate_moves(p, from_x, from_y, this->gh);
 }
 
-void engine::perform_move(move m, piece p) {
+void engine::perform_move(move& m, piece& p) {
   std::cout << "...right method called..." << std::endl;
   perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
 }
 
 
-void engine::perform_move(piece p,
+void engine::perform_move(piece& p,
                           uint8_t from_x,
                           uint8_t from_y,
                           uint8_t to_x,
                           uint8_t to_y,
                           move_type mt,
-                          piece promotion) {
+                          piece& promotion) {
   // TODO: CHECK IF MOVE IS LEGAL
   // TODO: Possible memory leaks...
 
@@ -154,7 +154,7 @@ void engine::perform_move(piece p,
   this->gh = new_gm;
 }
 
-void engine::perform_move(move m) {
+void engine::perform_move(move& m) {
   perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type);
 }
 
