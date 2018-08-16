@@ -24,7 +24,7 @@ class engine {
    * Performs a move given the move to be performed.
    * @param m The move to be performed
    */
-  void perform_move(move m);
+  void perform_move(move& m);
   /**
 * Performs a promotion move given the move to be performed.
 * @param m The move to be performed
@@ -77,13 +77,13 @@ class engine {
    * @param mt The type of move to be performed
    * @param promotion The piece a potential promoting pawn should promote to
    */
-  void perform_move(piece p,
+  void perform_move(piece& p,
                     uint8_t from_x,
                     uint8_t from_y,
                     uint8_t to_x,
                     uint8_t to_y,
                     move_type mt,
-                    piece& promotion = piece());
+                    piece promotion = piece());
   std::shared_ptr<game_history> gh;
 };
 

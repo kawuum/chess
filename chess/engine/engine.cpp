@@ -45,7 +45,8 @@ void engine::new_game() {
 
 void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y) {
   // FIXME GUESSING MOVE_TYPE HERE, BAD IDEA!!
-  this->perform_move(this->gh->curr_board.get_piece(from_x, from_y), from_x, from_y, to_x, to_y, move_type::MOVE);
+  piece p = this->gh->curr_board.get_piece(from_x, from_y); 
+  this->perform_move(p, from_x, from_y, to_x, to_y, move_type::MOVE);
 }
 
 std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y) {
@@ -65,7 +66,7 @@ void engine::perform_move(piece& p,
                           uint8_t to_x,
                           uint8_t to_y,
                           move_type mt,
-                          piece& promotion) {
+                          piece promotion) {
   // TODO: CHECK IF MOVE IS LEGAL
   // TODO: Possible memory leaks...
 
