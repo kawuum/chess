@@ -11,9 +11,9 @@ class piece {
 
  public:
 
-  piece() :valid(false) {
+  piece() : valid(false) {
   }
-     
+
   piece(piece_type p_in, piece_color c_in) : valid(true), p(p_in), c(c_in) {
   }
 
@@ -36,7 +36,7 @@ class piece {
   bool is_white() {
     return (c == piece_color::WHITE);
   }
-  
+
   bool is_valid() {
     return valid;
   }
