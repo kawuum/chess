@@ -108,7 +108,7 @@ class board {
    * @param y
    */
   piece get_piece(uint8_t x, uint8_t y);
-  
+
   /**
    * Removes all pieces from the board.
    */
