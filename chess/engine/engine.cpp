@@ -57,7 +57,6 @@ std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_
 
 void engine::perform_move(move m, piece p)
 {
-    std::cout << "...right method called..." << std::endl;
     perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
 }
 
@@ -101,7 +100,6 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
             new_gm->curr_board.move_piece(piece(ROOK, pie.get_piece_color()), 7, from_y, 5, to_y);
         }
     } else if(mt == PROMOTION || mt == CAPTURING_PROMOTION) {
-        std::cout << "...right if clause caught..." << std::endl;
         new_gm->curr_board.remove_piece(p, to_x, to_y);
         new_gm->curr_board.add_piece(promotion, to_x, to_y);
     }
