@@ -355,7 +355,7 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, boa
                     moves.push_back(m);
                 else if(!check_for_check && !is_check(b, m))
                     moves.push_back(m);
-            } else if ((std::get<0>(this->gamestate.ep_square) == (from_x + x)) && (std::get<1>(this->gamestate.ep_square) == (from_y + y))) {
+            } else if (!(((from_x + x) == 0) && ((from_y + y) == 0)) && (std::get<0>(this->gamestate.ep_square) == (from_x + x)) && (std::get<1>(this->gamestate.ep_square) == (from_y + y))) {
                 move m = (move) {mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y), ENPASSANT};
                 if(check_for_check && p.get_piece_type() == KING) 
                     moves.push_back(m);

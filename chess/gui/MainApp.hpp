@@ -18,17 +18,9 @@ class MainApp: public wxApp
 public:
     ~MainApp();
     virtual bool OnInit();
-    void draw_board(board& b);
-    void notify_click(uint8_t x_coord, uint8_t y_coord);
     
 private:
-    wxGridSizer *sizer;
-    MainFrame *frame;
-    wxImagePanel** panels;
-    std::shared_ptr<engine> eng;
-    
-    bool clicked;
-    std::tuple<uint8_t, uint8_t> clicked_coords;
+    MainFrame *frame;   
 };
 
 wxIMPLEMENT_APP(MainApp);
