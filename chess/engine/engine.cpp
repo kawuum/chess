@@ -55,7 +55,14 @@ std::vector<move> engine::get_legal_moves(piece p, uint8_t from_x, uint8_t from_
     return mg.generate_moves(p, from_x, from_y, this->gh);
 }
 
-void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt)
+void engine::perform_move(move m, piece p)
+{
+    std::cout << "...right method called..." << std::endl;
+    perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
+}
+
+
+void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt, piece promotion)
 {
     // TODO: CHECK IF MOVE IS LEGAL
     // TODO: Possible memory leaks...
@@ -93,6 +100,10 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
             // short castle
             new_gm->curr_board.move_piece(piece(ROOK, pie.get_piece_color()), 7, from_y, 5, to_y);
         }
+    } else if(mt == PROMOTION || mt == CAPTURING_PROMOTION) {
+        std::cout << "...right if clause caught..." << std::endl;
+        new_gm->curr_board.remove_piece(p, to_x, to_y);
+        new_gm->curr_board.add_piece(promotion, to_x, to_y);
     }
     piece captured_piece = this->gh->curr_board.get_piece(to_x, to_y);
     if(captured_piece.is_valid() && mt != ENPASSANT) {
@@ -101,6 +112,7 @@ void engine::perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,
         piece ep_piece = this->gh->curr_board.get_piece(std::get<0>(this->gh->ep_square), from_y);
         new_gm->curr_board.remove_piece(ep_piece, std::get<0>(this->gh->ep_square), from_y);
     }
+    this->gh->performed_move = (move) {p, from_x, from_y, to_x, to_y, mt};
     new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
     new_gm->castlingrights[0] = this->gh->castlingrights[0];
     new_gm->castlingrights[1] = this->gh->castlingrights[1];

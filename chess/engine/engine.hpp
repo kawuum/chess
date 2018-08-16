@@ -26,6 +26,12 @@ class engine
      * @param m The move to be performed
      */
     void perform_move(move m);
+        /**
+     * Performs a promotion move given the move to be performed.
+     * @param m The move to be performed
+     * @param p The piece the pawn should be promoted to
+     */
+    void perform_move(move m, piece p);
     /**
      * Reverses the last move.
      */
@@ -70,8 +76,9 @@ class engine
      * @param to_x x coordinate of target square
      * @param to_y y coordinate of target square
      * @param mt The type of move to be performed
+     * @param promotion The piece a potential promoting pawn should promote to
      */
-    void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt);
+    void perform_move(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y, move_type mt, piece promotion = piece());
     std::shared_ptr<game_history> gh;
 };
 
