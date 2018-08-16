@@ -1,6 +1,7 @@
 #include "../datastructures/board.hpp"
 #include "../datastructures/enums.hpp"
 #include <memory>
+#include "move.hpp"
 
 #ifndef GAMEHISTORY_HPP
 #define GAMEHISTORY_HPP
@@ -12,6 +13,7 @@ struct game_history {
     piece_color to_move;
     castling_rights castlingrights[2];
     std::tuple<uint8_t, uint8_t> ep_square;
+    move performed_move;
 };
 
 #endif

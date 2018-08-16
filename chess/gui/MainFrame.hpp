@@ -25,6 +25,7 @@ private:
     void OnExit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
     void new_game();
+    std::string generate_notation();
     
     bool clicked;
     std::tuple<uint8_t, uint8_t> clicked_coords;

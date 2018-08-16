@@ -1,6 +1,7 @@
 #include "MainFrame.hpp"
 #include "../datastructures/consts.hpp"
 #include <algorithm>
+#include <sstream>
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
         : wxFrame(NULL, wxID_ANY, title, pos, size)
@@ -44,12 +45,12 @@ void MainFrame::OnAbout(wxCommandEvent& event)
 }
 void MainFrame::OnNewGame(wxCommandEvent& event)
 {
-
     this->new_game();
 }
 
 void MainFrame::OnUndoMove(wxCommandEvent& event)
 {
+    std::cout << this->generate_notation() << std::endl;
     eng->undo_move();
     draw_board(eng->get_current_board());
 }
@@ -60,6 +61,93 @@ void MainFrame::new_game()
     draw_board(eng->get_current_board());
 }
 
+std::string MainFrame::generate_notation()
+{
+    // TODO: implement
+    std::stringstream strstr;
+    std::vector<game_history> ghv;
+    game_history g_h = this->eng->get_current_gamestate();
+    std::cout << "Filling vector..." << std::endl;
+    ghv.push_back(g_h);
+    while(g_h.prev != NULL) {
+        g_h = *g_h.prev;
+        ghv.push_back(g_h);
+    }
+    std::cout << "Vector filled." << std::endl;
+    while(ghv.size() > 0) {
+        g_h = ghv.back();
+        ghv.pop_back();
+        if(!g_h.performed_move.mover.is_valid())
+            break;
+        uint8_t move_no = (g_h.num_halfmoves/2) + 1;
+        std::string piece_from_x, piece_to_x;
+        piece_from_x.push_back(97 + g_h.performed_move.from_x);
+        piece_to_x.push_back(97 + g_h.performed_move.to_x);
+        if(g_h.num_halfmoves % 2 == 0) {
+            // white move, so we have to start with ply number
+            strstr << (int)move_no << ". ";
+        } 
+        switch(g_h.performed_move.mover.get_piece_type()) {
+            case BISHOP:
+                strstr << "B";
+                if(g_h.performed_move.type == CAPTURE)
+                    strstr << "x";
+                strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                break;
+            case KING:
+                // check if we castled
+                if(g_h.performed_move.type == CASTLING) {
+                    if(g_h.performed_move.from_x > g_h.performed_move.to_x) {
+                        // long castle
+                        strstr << "O-O-O";
+                    } else {
+                        // short castle
+                        strstr << "O-O";
+                    }
+                } else {
+                    strstr << "K";
+                    if(g_h.performed_move.type == CAPTURE)
+                        strstr << "x";
+                    strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                }
+                break;
+            case KNIGHT:
+                strstr << "N";
+                // TODO: this is potentially ambiguous! how in the heck do we solve this? always be explicit?
+                if(g_h.performed_move.type == CAPTURE)
+                    strstr << "x";
+                strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                break;
+            case PAWN:
+                if(g_h.performed_move.type == CAPTURE)
+                    strstr << piece_from_x << "x";  // TODO: only print when "from_x" when ambiguous? how to check!?
+                strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                break;
+            case QUEEN:
+                strstr << "Q";
+                if(g_h.performed_move.type == CAPTURE)
+                    strstr << "x";
+                strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                break;
+            case ROOK:
+                strstr << "R";
+                // TODO: this is potentially ambiguous! how in the heck do we solve this? always be explicit?
+                if(g_h.performed_move.type == CAPTURE)
+                    strstr << "x";
+                strstr << piece_to_x << (int)(g_h.performed_move.to_y + 1);
+                break;
+            default:
+                break;
+        }
+        if(g_h.num_halfmoves % 2 == 0) {
+            strstr << " ";
+        } else {
+            strstr << std::endl;
+        }
+    }
+
+    return strstr.str();
+}
 
 void MainFrame::recolor_board()
 {
