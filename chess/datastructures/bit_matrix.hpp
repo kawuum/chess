@@ -24,9 +24,9 @@ class bit_matrix {
 
   bit_matrix() : raw(0) {
   }
-  
+
   bit_matrix(uint64_t in) {
-      raw = in;
+    raw = in;
   }
 
   bool get_bit_at(uint8_t i) {
@@ -72,28 +72,28 @@ class bit_matrix {
   uint8_t get_num_bits_set() {
     return (uint8_t) __builtin_popcountl(raw);
   }
-  
+
   /**
    * Method to unset all bits.
    */
   void clear() {
-      raw = 0;
+    raw = 0;
   }
-  
+
   /**
    * Returns the internal representation of the bit matrix
    * @return Raw bit matrix
    */
   uint64_t get_raw() {
-      return raw;
+    return raw;
   }
-  
+
   bit_matrix operator&(const bit_matrix &rhs) {
-      return bit_matrix(raw & rhs.raw);
+    return bit_matrix(raw & rhs.raw);
   }
-  
+
   bit_matrix operator|(const bit_matrix &rhs) {
-      return bit_matrix(raw | rhs.raw);
+    return bit_matrix(raw | rhs.raw);
   }
 
   /*

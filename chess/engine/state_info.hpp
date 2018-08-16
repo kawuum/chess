@@ -25,7 +25,7 @@ struct state_info {
   int num_halfmoves;
   piece_color color_to_move;
   move last_move;
-  state_info* prev;
+  state_info *prev;
 };
 
 #endif
