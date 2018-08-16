@@ -30,7 +30,7 @@ class engine {
 * @param m The move to be performed
 * @param p The piece the pawn should be promoted to
 */
-  void perform_move(move m, piece p);
+  void perform_move(move& m, piece& p);
   /**
    * Reverses the last move.
    */
@@ -47,7 +47,7 @@ class engine {
    * @param from_y y coordinate of the given piece
    * @returns A vector containing all legal moves for the given piece
    */
-  std::vector<move> get_legal_moves(piece p, uint8_t from_x, uint8_t from_y);
+  std::vector<move> get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y);
   /**
    * Returns a reference of the current board.
    * @returns A reference of the current board
@@ -83,7 +83,7 @@ class engine {
                     uint8_t to_x,
                     uint8_t to_y,
                     move_type mt,
-                    piece promotion = piece());
+                    piece& promotion = piece());
   std::shared_ptr<game_history> gh;
 };
 
