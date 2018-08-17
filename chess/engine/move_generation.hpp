@@ -11,7 +11,7 @@
 class move_generation {
  public:
   std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, std::shared_ptr<game_history> gh);
-  std::vector<move> generate_all_moves(game_history gh);
+  std::vector<move> generate_all_moves(game_history* gh);
   bool is_check(board &b, move m);
  private:
   std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board &b, bool check_for_check = false);

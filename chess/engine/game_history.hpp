@@ -14,6 +14,7 @@ struct game_history {
   castling_rights castlingrights[2];
   std::tuple<uint8_t, uint8_t> ep_square;
   move performed_move;
+  game_result result;
 };
 
 #endif

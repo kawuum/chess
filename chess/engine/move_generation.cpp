@@ -2,8 +2,22 @@
 #include "assert.h"
 #include "../datastructures/enums.hpp"
 
-std::vector<move> move_generation::generate_all_moves(game_history gh) {
-  return generate_all_moves(gh.curr_board, gh.to_move, false);
+std::vector<move> move_generation::generate_all_moves(game_history* gh) {
+  std::vector<move> res = generate_all_moves(gh->curr_board, gh->to_move, false);
+  this->gamestate = *gh;
+  if(res.empty()) {
+      // TODO: seems like the game is over, we probably should do something... but we also probably should have detected this before...
+      // somewhat of a hack to check if current position is check... should we maybe even save that in game_history? would make a lot of things easier...
+      move m =  {piece(KING, this->gamestate.to_move), 0, 0, 0, 0, NO_MOVE};
+      if(is_check(this->gamestate.curr_board, m)) {
+          // current position is check, no possible moves for color in check, so it seems to be mate
+          gh->result = this->gamestate.to_move == piece_color::WHITE ? BLACK_WIN : WHITE_WIN;
+      } else {
+          // no possible moves, but position does not appear to be check, so it looks like stalemate
+          gh->result = DRAW;
+      }
+  }
+  return res;
 }
 
 
@@ -460,6 +474,9 @@ bool move_generation::is_check(board &b, move m) {
   board new_board = b;
   piece_color color = m.mover.get_piece_color();
   switch (m.type) {
+    case NO_MOVE:
+      // "null" move, don't do anything
+      break;
     case MOVE:
       new_board.move_piece(m.mover, m.from_x, m.from_y, m.to_x, m.to_y);
       break;

@@ -19,4 +19,8 @@ enum castling_rights {
   BOTH = 3
 };
 
+enum game_result {
+    RUNNING, DRAW, WHITE_WIN, BLACK_WIN    
+};
+
 #endif //CHESS_ENUMS_HPP
