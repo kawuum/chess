@@ -48,6 +48,12 @@ class engine {
    * @returns A vector containing all legal moves for the given piece
    */
   std::vector<move> get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y);
+    /**
+   * Returns all legal moves for the player whose turn it is.
+   * @param gh A pointer to the current game_history
+   * @returns A vector containing all legal moves for player
+   */
+  std::vector<move> get_all_legal_moves(game_history* gh);
   /**
    * Returns a reference of the current board.
    * @returns A reference of the current board

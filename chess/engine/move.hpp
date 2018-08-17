@@ -5,6 +5,7 @@
 #define MOVE_HPP
 
 enum move_type {
+  NO_MOVE,
   MOVE,
   CAPTURE,
   ENPASSANT,

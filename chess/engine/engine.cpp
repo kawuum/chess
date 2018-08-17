@@ -8,6 +8,7 @@ void engine::new_game() {
   this->gh->to_move = piece_color::WHITE;
   this->gh->castlingrights[(int) piece_color::WHITE] = BOTH;
   this->gh->castlingrights[(int) piece_color::BLACK] = BOTH;
+  this->gh->result = RUNNING;
   this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0, 0);
   this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE), 1, 0);
   this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE), 2, 0);
@@ -58,6 +59,10 @@ void engine::perform_move(move& m, piece& p) {
   perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
 }
 
+std::vector<move> engine::get_all_legal_moves(game_history* gh) {
+  move_generation mg;
+  return mg.generate_all_moves(gh);
+}
 
 void engine::perform_move(piece& p,
                           uint8_t from_x,
