@@ -1,5 +1,7 @@
 #include "engine.hpp"
 #include "move_generation.hpp"
+#include <assert.h>
+#include <assert.h>
 #include "move_generation.hpp"
 
 void engine::new_game() {
@@ -44,18 +46,18 @@ void engine::new_game() {
   this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7, 6);
 }
 
-void engine::perform_move(uint8_t from_x, uint8_t from_y, uint8_t to_x, uint8_t to_y) {
-  // FIXME GUESSING MOVE_TYPE HERE, BAD IDEA!!
-  piece p = this->gh->curr_board.get_piece(from_x, from_y); 
-  this->perform_move(p, from_x, from_y, to_x, to_y, move_type::MOVE);
-}
-
 std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y) {
   move_generation mg;
   return mg.generate_moves(p, from_x, from_y, this->gh);
 }
 
+void engine::perform_move(move& m) {
+  assert(m.type != PROMOTION && m.type != CAPTURING_PROMOTION);
+  perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type);
+}
+
 void engine::perform_move(move& m, piece& p) {
+  assert(p.is_valid());
   perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
 }
 
@@ -71,7 +73,7 @@ void engine::perform_move(piece& p,
                           uint8_t to_y,
                           move_type mt,
                           piece promotion) {
-  // TODO: CHECK IF MOVE IS LEGAL
+  // TODO: CHECK IF MOVE IS LEGAL?
   // TODO: Possible memory leaks...
 
   move_generation mg;
@@ -156,10 +158,6 @@ void engine::perform_move(piece& p,
   new_gm->prev = this->gh;
 
   this->gh = new_gm;
-}
-
-void engine::perform_move(move& m) {
-  perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type);
 }
 
 board &engine::get_current_board() {

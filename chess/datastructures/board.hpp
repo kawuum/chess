@@ -169,7 +169,23 @@ class board {
   * @return Total number of pieces.
   */
   uint8_t get_num_pieces(piece p);
-
+  
+  bool operator==(board &rhs) {
+      return (white_king == rhs.white_king &&
+              white_queens == rhs.white_queens &&
+              white_bishops == rhs.white_bishops &&
+              white_knights == rhs.white_knights &&
+              white_pawns == rhs.white_pawns &&
+              white_rooks == rhs.white_rooks &&
+              black_king == rhs.black_king &&
+              black_queens == rhs.black_queens &&
+              black_bishops == rhs.black_bishops &&
+              black_knights == rhs.black_knights &&
+              black_pawns == rhs.black_pawns &&
+              black_rooks == rhs.black_rooks
+      );
+  };
+  
  private:
   bit_matrix *find_piece(uint8_t from_x, uint8_t from_y);
 
