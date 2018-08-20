@@ -3,8 +3,8 @@
 #include "../datastructures/enums.hpp"
 
 std::vector<move> move_generation::generate_all_moves(game_history* gh) {
-  std::vector<move> res = generate_all_moves(gh->curr_board, gh->to_move, false);
   this->gamestate = *gh;
+  std::vector<move> res = generate_all_moves(gh->curr_board, gh->to_move, false);
   if(res.empty()) {
       // TODO: seems like the game is over, we probably should do something... but we also probably should have detected this before...
       // somewhat of a hack to check if current position is check... should we maybe even save that in game_history? would make a lot of things easier...
