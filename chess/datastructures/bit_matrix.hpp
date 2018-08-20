@@ -96,6 +96,10 @@ class bit_matrix {
     return bit_matrix(raw | rhs.raw);
   }
 
+  bool operator==(bit_matrix &rhs) {
+    return raw == rhs.raw;
+  }
+
   /*
    * Helper methods
    */

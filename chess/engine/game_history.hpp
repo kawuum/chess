@@ -15,6 +15,10 @@ struct game_history {
   std::tuple<uint8_t, uint8_t> ep_square;
   move performed_move;
   game_result result;
+  bool operator==(game_history &rhs) {
+    return ((num_halfmoves == rhs.num_halfmoves) && (to_move == rhs.to_move) && (curr_board == rhs.curr_board));
+  }
 };
+
 
 #endif
