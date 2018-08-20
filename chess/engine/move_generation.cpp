@@ -454,9 +454,10 @@ void move_generation::pawnmoves(piece mover,
   if (!p.is_valid()) {
     move_type mtype = from_y + y == promotion_y ? PROMOTION : MOVE;
     move m = (move) {mover, from_x, from_y, (uint8_t) (from_x), (uint8_t) (from_y + y), mtype};
-    if (is_check(b, m))
-      return;
-    moves.push_back(m);
+    if (!is_check(b, m)) {
+      // we CANNOT just return if a single move would (still) result in check... we might be able to block a check with a double move!
+      moves.push_back(m);
+    }
     //check if we are still on the starting file
     if (from_y == starting_y) {
       p = b.get_piece(from_x, from_y + 2 * y);
