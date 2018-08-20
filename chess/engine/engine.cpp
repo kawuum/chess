@@ -1,7 +1,7 @@
 #include "engine.hpp"
 #include "move_generation.hpp"
 #include <assert.h>
-#include <assert.h>
+#include <algorithm>
 #include "move_generation.hpp"
 
 void engine::new_game() {
@@ -47,8 +47,35 @@ void engine::new_game() {
 }
 
 std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y) {
-  move_generation mg;
-  return mg.generate_moves(p, from_x, from_y, this->gh);
+  // since this has to be for the current game state, we don't need to call move_generation here if legal_moves is not empty, since we already have all legal moves saved... filter out the approriate ones and return them
+  if(legal_moves.empty() && this->gh->result == RUNNING)
+  {
+      // we have no moves, but the game is still running... this seems to be the first call
+      move_generation mg;
+      this->legal_moves = mg.generate_all_moves(this->gh.get());
+  }
+  std::vector<move> possible_moves;
+  std::for_each(this->legal_moves.begin(), this->legal_moves.end(),
+          [from_x, from_y, &possible_moves](move& item) -> 
+                void {
+                    if (item.from_x == from_x && item.from_y == from_y) {
+                        possible_moves.push_back(item);                        
+                    }
+                });
+  return possible_moves;
+  /*move_generation mg;
+  return mg.generate_moves(p, from_x, from_y, this->gh);*/
+}
+
+std::vector<move> engine::get_all_legal_moves(game_history* gh) {
+  if(*gh == *(this->gh.get())) {
+    // we are being asked for all legal moves for the currently saved game_history, so we can just return the saved ones if they are not empty
+    return this->legal_moves;
+  } else {
+    // not the current game state, we need to actually calculate stuff here
+    move_generation mg;
+    return mg.generate_all_moves(gh);
+  }
 }
 
 void engine::perform_move(move& m) {
@@ -59,11 +86,6 @@ void engine::perform_move(move& m) {
 void engine::perform_move(move& m, piece& p) {
   assert(p.is_valid());
   perform_move(m.mover, m.from_x, m.from_y, m.to_x, m.to_y, m.type, p);
-}
-
-std::vector<move> engine::get_all_legal_moves(game_history* gh) {
-  move_generation mg;
-  return mg.generate_all_moves(gh);
 }
 
 void engine::perform_move(piece& p,
@@ -158,6 +180,7 @@ void engine::perform_move(piece& p,
   new_gm->prev = this->gh;
 
   this->gh = new_gm;
+  this->legal_moves = mg.generate_all_moves(this->gh.get());
 }
 
 board &engine::get_current_board() {

@@ -83,6 +83,7 @@ class engine {
                     move_type mt,
                     piece promotion = piece());
   std::shared_ptr<game_history> gh;
+  std::vector<move> legal_moves;
 };
 
 #endif

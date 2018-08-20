@@ -165,35 +165,8 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
     panels[x_coord + (8 * y_coord)]->SetBackgroundColour(BG_RED);
     panels[x_coord + (8 * y_coord)]->paintNow();
     piece current_piece = eng->get_current_board().get_piece(x_coord, y_coord);
-    // FIXME: since we do not "correctly" check for "game over" situations yet, we should probably get ALL legal moves for the time being, to determine whether the game is already over...
-    /*std::vector<move>
+    std::vector<move>
         possible_moves = eng->get_legal_moves(current_piece, x_coord, y_coord);
-    */
-    game_history gh = eng->get_current_gamestate();
-    std::vector<move> all_moves = eng->get_all_legal_moves(&gh);
-    if(gh.result != RUNNING) {
-        // the game seems to be over, do something!
-        std::string endstring;
-        if(gh.result == DRAW) {
-            endstring = "The game ended in a draw!";
-        } else {
-            endstring = gh.result == WHITE_WIN ? "White wins!" : "Black wins!";
-        }
-        wxMessageDialog* dialog = new wxMessageDialog(this, endstring, "Game over!");
-        dialog->ShowModal();
-        clicked = false;
-        return;
-    }
-    // game not over yet, now filter out all moves that are for the selected piece...
-    std::vector<move> possible_moves;
-    std::for_each(all_moves.begin(), all_moves.end(),
-          [x_coord, y_coord, &possible_moves](move& item) -> 
-                void {
-                    if (item.from_x == x_coord && item.from_y == y_coord) {
-                        possible_moves.push_back(item);                        
-                    }
-                });
-
     for (auto it = possible_moves.begin(); it < possible_moves.end(); ++it) {
       panels[it->to_x + (8 * it->to_y)]->SetBackgroundColour(BG_BLUE);
       panels[it->to_x + (8 * it->to_y)]->paintNow();
@@ -252,6 +225,21 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
           eng->perform_move(*clicked_move);
         }
         draw_board(eng->get_current_board());
+      }
+      // should we check for wins here?
+      game_result result = eng->get_current_gamestate().result;
+      if(result != RUNNING) {
+        // the game seems to be over, do something!
+        std::string endstring;
+        if(result == DRAW) {
+            endstring = "The game ended in a draw!";
+        } else {
+            endstring = result == WHITE_WIN ? "White wins!" : "Black wins!";
+        }
+        wxMessageDialog* dialog = new wxMessageDialog(this, endstring, "Game over!");
+        dialog->ShowModal();
+        clicked = false;
+        return;
       }
     }
   }
