@@ -5,6 +5,7 @@
 #include "move_generation.hpp"
 
 void engine::new_game() {
+  this->legal_moves = std::vector<move>();
   this->gh = std::make_shared<game_history>();
   this->gh->num_halfmoves = 0;
   this->gh->to_move = piece_color::WHITE;
@@ -55,21 +56,20 @@ std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x, uint8_t from
       this->legal_moves = mg.generate_all_moves(this->gh.get());
   }
   std::vector<move> possible_moves;
-  std::for_each(this->legal_moves.begin(), this->legal_moves.end(),
-          [from_x, from_y, &possible_moves](move& item) -> 
-                void {
-                    if (item.from_x == from_x && item.from_y == from_y) {
-                        possible_moves.push_back(item);                        
-                    }
-                });
+  // since we already have all legal moves for the current position saved, we can just filter out the ones for the given piece instead of calculating them again
+  std::copy_if(this->legal_moves.begin(), this->legal_moves.end(), std::back_inserter(possible_moves),
+      [from_x, from_y](move& item) { return (item.from_x == from_x && item.from_y == from_y); });
   return possible_moves;
-  /*move_generation mg;
-  return mg.generate_moves(p, from_x, from_y, this->gh);*/
 }
 
 std::vector<move> engine::get_all_legal_moves(game_history* gh) {
   if(*gh == *(this->gh.get())) {
     // we are being asked for all legal moves for the currently saved game_history, so we can just return the saved ones if they are not empty
+    if(this->legal_moves.empty() && gh->result == RUNNING) {
+      // in case this is the first call, we generate the moves first
+      move_generation mg;
+      this->legal_moves = mg.generate_all_moves(gh);
+    }
     return this->legal_moves;
   } else {
     // not the current game state, we need to actually calculate stuff here

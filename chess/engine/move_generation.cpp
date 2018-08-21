@@ -17,6 +17,7 @@ std::vector<move> move_generation::generate_all_moves(game_history* gh) {
           gh->result = DRAW;
       }
   }
+  gh->is_check = is_check(this->gamestate.curr_board, (move) {piece(KING, this->gamestate.to_move), 0, 0, 0, 0, NO_MOVE});
   return res;
 }
 
@@ -58,7 +59,6 @@ std::vector<move>
 move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board &b, bool check_for_check) {
   // TODO: Generates only pseudo-legal moves!
   assert(mover.is_valid());
-
   switch (mover.get_piece_type()) {
     case KNIGHT: {
       std::vector<move> moves;
@@ -128,7 +128,7 @@ void move_generation::knightmoves(piece mover,
       if (p.is_valid() && (p.get_piece_color() != mover.get_piece_color())) {
         m.type = CAPTURE;
         if (check_for_check && p.get_piece_type() == KING) {
-          // doesn't matter that this is a capturing move an we return a standard move, we just want to find the first king capture
+          // doesn't matter that this is a capturing move and we return a standard move, we just want to find the first king capture
           moves.push_back(m);
           return;
         } else if (!check_for_check && !is_check(b, m))
