@@ -239,7 +239,6 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
         wxMessageDialog* dialog = new wxMessageDialog(this, endstring, "Game over!");
         dialog->ShowModal();
         clicked = false;
-        return;
       }
     }
   }
