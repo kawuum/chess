@@ -180,6 +180,7 @@ void engine::perform_move(piece& p,
   new_gm->prev = this->gh;
 
   this->gh = new_gm;
+  // fetch all legal moves available after the move that was just performed: this way we know whether the game is already over, and we don't need to check for move legality (again) when we perform the next move
   this->legal_moves = mg.generate_all_moves(this->gh.get());
 }
 

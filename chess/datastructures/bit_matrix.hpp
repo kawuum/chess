@@ -99,6 +99,10 @@ class bit_matrix {
   bool operator==(bit_matrix &rhs) {
     return raw == rhs.raw;
   }
+  
+  bool operator!=(bit_matrix &rhs) {
+    return raw != rhs.raw;
+  }
 
   /*
    * Helper methods
@@ -130,5 +134,12 @@ class bit_matrix {
 
 };
 
+inline bool operator==(bit_matrix lhs, const uint64_t &rhs) {
+  return lhs.get_raw() == rhs;
+};
+
+inline bool operator!=(bit_matrix lhs, const uint64_t &rhs) {
+  return lhs.get_raw() != rhs;
+};
 
 #endif //CHESS_BIT_MATRIX_HPP

@@ -79,39 +79,39 @@ void board::clear() {
 }
 
 bool board::check_sanity() {
-  if ((white_bishops.get_raw() & white_king.get_raw()) != 0
-      || (white_bishops.get_raw() & white_knights.get_raw()) != 0
-      || (white_bishops.get_raw() & white_pawns.get_raw()) != 0
-      || (white_bishops.get_raw() & white_queens.get_raw()) != 0
-      || (white_bishops.get_raw() & white_rooks.get_raw()) != 0
-      || (white_king.get_raw() & white_knights.get_raw()) != 0
-      || (white_king.get_raw() & white_pawns.get_raw()) != 0
-      || (white_king.get_raw() & white_queens.get_raw()) != 0
-      || (white_king.get_raw() & white_rooks.get_raw()) != 0
-      || (white_knights.get_raw() & white_pawns.get_raw()) != 0
-      || (white_knights.get_raw() & white_queens.get_raw()) != 0
-      || (white_knights.get_raw() & white_rooks.get_raw()) != 0
-      || (white_pawns.get_raw() & white_queens.get_raw()) != 0
-      || (white_pawns.get_raw() & white_rooks.get_raw()) != 0
-      || (white_queens.get_raw() & white_rooks.get_raw()) != 0) {
+  if ((white_bishops & white_king) != 0
+      || (white_bishops & white_knights) != 0
+      || (white_bishops & white_pawns) != 0
+      || (white_bishops & white_queens) != 0
+      || (white_bishops & white_rooks) != 0
+      || (white_king & white_knights) != 0
+      || (white_king & white_pawns) != 0
+      || (white_king & white_queens) != 0
+      || (white_king & white_rooks) != 0
+      || (white_knights & white_pawns) != 0
+      || (white_knights & white_queens) != 0
+      || (white_knights & white_rooks) != 0
+      || (white_pawns & white_queens) != 0
+      || (white_pawns & white_rooks) != 0
+      || (white_queens & white_rooks) != 0) {
     return false;
   }
 
-  if ((black_bishops.get_raw() & black_king.get_raw()) != 0
-      || (black_bishops.get_raw() & black_knights.get_raw()) != 0
-      || (black_bishops.get_raw() & black_pawns.get_raw()) != 0
-      || (black_bishops.get_raw() & black_queens.get_raw()) != 0
-      || (black_bishops.get_raw() & black_rooks.get_raw()) != 0
-      || (black_king.get_raw() & black_knights.get_raw()) != 0
-      || (black_king.get_raw() & black_pawns.get_raw()) != 0
-      || (black_king.get_raw() & black_queens.get_raw()) != 0
-      || (black_king.get_raw() & black_rooks.get_raw()) != 0
-      || (black_knights.get_raw() & black_pawns.get_raw()) != 0
-      || (black_knights.get_raw() & black_queens.get_raw()) != 0
-      || (black_knights.get_raw() & black_rooks.get_raw()) != 0
-      || (black_pawns.get_raw() & black_queens.get_raw()) != 0
-      || (black_pawns.get_raw() & black_rooks.get_raw()) != 0
-      || (black_queens.get_raw() & black_rooks.get_raw()) != 0) {
+  if ((black_bishops & black_king) != 0
+      || (black_bishops & black_knights) != 0
+      || (black_bishops & black_pawns) != 0
+      || (black_bishops & black_queens) != 0
+      || (black_bishops & black_rooks) != 0
+      || (black_king & black_knights) != 0
+      || (black_king & black_pawns) != 0
+      || (black_king & black_queens) != 0
+      || (black_king & black_rooks) != 0
+      || (black_knights & black_pawns) != 0
+      || (black_knights & black_queens) != 0
+      || (black_knights & black_rooks) != 0
+      || (black_pawns & black_queens) != 0
+      || (black_pawns & black_rooks) != 0
+      || (black_queens & black_rooks) != 0) {
     return false;
   }
 
