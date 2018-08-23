@@ -257,7 +257,6 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
         clicked = false;
       }
     }
-    std::cout << this->generate_notation() << std::endl;
   }
 }
 
