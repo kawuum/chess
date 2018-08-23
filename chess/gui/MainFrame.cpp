@@ -67,16 +67,35 @@ std::string MainFrame::generate_notation() {
   while (ghv.size() > 0) {
     g_h = ghv.back();
     ghv.pop_back();
-    if (!g_h.performed_move.mover.is_valid())
-      break;
+    if (!g_h.performed_move.mover.is_valid() && g_h.result == RUNNING)
+      continue;
     uint8_t move_no = (g_h.num_halfmoves / 2) + 1;
     std::string piece_from_x, piece_to_x;
     piece_from_x.push_back(97 + g_h.performed_move.from_x);
     piece_to_x.push_back(97 + g_h.performed_move.to_x);
+    // finish last move first: if check we have to add +, for mate #, for nothing we either have add a space (for black moves now) or a linefeed (white moves) 
+    if(g_h.is_check) {
+      if(g_h.result != RUNNING) {
+        // it's check and game over, so it's mate
+        strstr << "#" << std::endl;
+        strstr << (g_h.result == WHITE_WIN ? "1-0" : "0-1" ) << std::endl;
+        // done here, don't continue
+        break;
+      } else {
+        // it's check, but not mate
+        strstr << "+";
+      }
+    } else if (g_h.result == DRAW) {
+      strstr << std::endl << "1/2-1/2" << std::endl;
+      // done here, don't continue
+      break;
+    }
     if (g_h.num_halfmoves % 2 == 0) {
+      strstr << std::endl;
       // white move, so we have to start with ply number
       strstr << (int) move_no << ". ";
-    }
+    } else
+      strstr << " ";
     switch (g_h.performed_move.mover.get_piece_type()) {
       case BISHOP:
         strstr << "B";
@@ -115,6 +134,7 @@ std::string MainFrame::generate_notation() {
         break;
       case QUEEN:
         strstr << "Q";
+        // TODO: this is potentially ambiguous! how in the heck do we solve this? always be explicit?
         if (g_h.performed_move.type == CAPTURE)
           strstr << "x";
         strstr << piece_to_x << (int) (g_h.performed_move.to_y + 1);
@@ -129,11 +149,7 @@ std::string MainFrame::generate_notation() {
       default:
         break;
     }
-    if (g_h.num_halfmoves % 2 == 0) {
-      strstr << " ";
-    } else {
-      strstr << std::endl;
-    }
+    
   }
 
   return strstr.str();
@@ -241,6 +257,7 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
         clicked = false;
       }
     }
+    std::cout << this->generate_notation() << std::endl;
   }
 }
 

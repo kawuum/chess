@@ -3,6 +3,7 @@
 #include "../datastructures/enums.hpp"
 
 std::vector<move> move_generation::generate_all_moves(game_history* gh) {
+  counter = 0;
   this->gamestate = *gh;
   std::vector<move> res = generate_all_moves(gh->curr_board, gh->to_move, false);
   if(res.empty()) {
@@ -18,6 +19,7 @@ std::vector<move> move_generation::generate_all_moves(game_history* gh) {
       }
   }
   gh->is_check = is_check(this->gamestate.curr_board, (move) {piece(KING, this->gamestate.to_move), 0, 0, 0, 0, NO_MOVE});
+  //std::cout << "generate_moves call counter: " << (int)counter << " times for " << (int)res.size() << " generated moves" << std::endl;
   return res;
 }
 
@@ -57,7 +59,7 @@ move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, std
 
 std::vector<move>
 move_generation::generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board &b, bool check_for_check) {
-  // TODO: Generates only pseudo-legal moves!
+  ++counter;
   assert(mover.is_valid());
   switch (mover.get_piece_type()) {
     case KNIGHT: {
@@ -434,7 +436,7 @@ void move_generation::pawnmoves(piece mover,
           moves.push_back(m);
         else if (!check_for_check && !is_check(b, m))
           moves.push_back(m);
-      } else if (!(((from_x + x) == 0) && ((from_y + y) == 0))
+      } else if (!((from_y + y) == 0)  // "empty" en passant square needs to be excluded, en passant captures on 0,0 are impossible; only y-ranks 2 and 5 should be possible
           && (std::get<0>(this->gamestate.ep_square) == (from_x + x))
           && (std::get<1>(this->gamestate.ep_square) == (from_y + y))) {
         move m = (move) {mover, from_x, from_y, (uint8_t) (from_x + x), (uint8_t) (from_y + y), ENPASSANT};
