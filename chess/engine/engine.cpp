@@ -189,8 +189,10 @@ board &engine::get_current_board() {
 }
 
 void engine::undo_move() {
-  if (this->gh->prev != NULL)
+  if (this->gh->prev != NULL) {
     this->gh = this->gh->prev;
+    this->legal_moves.clear();
+  }
 }
 
 piece_color engine::get_color_to_move() {
