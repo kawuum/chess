@@ -2,6 +2,7 @@
 #include "../datastructures/consts.hpp"
 #include <algorithm>
 #include <sstream>
+#include "../ai/random/random_ai.hpp"
 
 MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
     : wxFrame(NULL, wxID_ANY, title, pos, size) {
@@ -10,8 +11,9 @@ MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &si
   wxMenu *menuFile = new wxMenu;
   menuFile->Append(ID_NewGame, "&New Game\tCtrl-N",
                    "Start a new game");
-  menuFile->AppendSeparator();
   menuFile->Append(ID_UndoMove, "&Undo Move\tCtrl-U", "Undo the last move");
+  menuFile->Append(ID_AddAI, "&Add AI\tCtrl-A", "Add an AI to the game");
+  menuFile->Append(ID_RemoveAI, "&Remove AI\tCtrl-R", "Remove an AI from the game");
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
   wxMenu *menuHelp = new wxMenu;
@@ -27,6 +29,11 @@ MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &si
 
   eng = std::make_shared<engine>();
   this->new_game();
+  
+  // init AIs
+  curr_ai = std::vector<ai_template*>(2);
+  ai_list.push_back(new random_ai(eng.get()));
+  
 }
 MainFrame::~MainFrame() {
   if (panels != NULL) {
@@ -47,6 +54,26 @@ void MainFrame::OnNewGame(wxCommandEvent &event) {
 void MainFrame::OnUndoMove(wxCommandEvent &event) {
   eng->undo_move();
   draw_board(eng->get_current_board());
+}
+
+void MainFrame::OnAddAI(wxCommandEvent& event)
+{
+  wxArrayString *arrstr = new wxArrayString;
+  std::for_each(ai_list.begin(), ai_list.end(), [arrstr](ai_template* ai) { arrstr->Add(wxString(ai->get_name()));});
+  wxSingleChoiceDialog
+    *dialog = new wxSingleChoiceDialog(this, "Choose AI to take over current color", "Choose AI to add", *arrstr);
+  dialog->ShowModal();
+  ai_template* selected = ai_list.at(dialog->GetSelection());
+  // add AI
+  curr_ai.at((int)eng->get_color_to_move()) = selected;
+}
+
+void MainFrame::OnRemoveAI(wxCommandEvent& event)
+{
+  // TODO: remove AI
+  //curr_ai[(int)eng->get_color_to_move()] = ai_template(eng.get(), "");
+  wxMessageDialog *dialog = new wxMessageDialog(this, "Current color AI was removed", "AI removed");
+  dialog->ShowModal();
 }
 
 void MainFrame::new_game() {
@@ -169,7 +196,8 @@ void MainFrame::recolor_board() {
 }
 
 void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
-
+  if(this->let_ai_move())
+    return;
   if (!clicked) { // First time clicked, we check if the click is on a piece, else return
     auto p = eng->get_current_board().get_piece(x_coord, y_coord);
     if (!p.is_valid() || p.get_piece_color() != eng->get_color_to_move()) {
@@ -260,6 +288,21 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
   }
 }
 
+bool MainFrame::let_ai_move()
+{
+  if(curr_ai.size() == 0) {
+    return false;
+  }
+  ai_template* ai = curr_ai.at((int)eng->get_color_to_move());
+  if(ai != NULL) {
+    move m = ai->next_move();
+    eng->perform_move(m);
+    draw_board(eng->get_current_board());
+    return true;
+  }
+  return false;
+}
+
 void MainFrame::draw_board(board &b) {
   sizer = new wxGridSizer(8, 0, 0);
   for (int y = 8; y > 0; --y) {
@@ -332,6 +375,10 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame
 EVT_MENU(ID_NewGame, MainFrame::OnNewGame
 )
 EVT_MENU(ID_UndoMove, MainFrame::OnUndoMove
+)
+EVT_MENU(ID_AddAI, MainFrame::OnAddAI
+)
+EVT_MENU(ID_RemoveAI, MainFrame::OnRemoveAI
 )
 EVT_MENU(wxID_EXIT, MainFrame::OnExit
 )
