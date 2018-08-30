@@ -11,4 +11,5 @@ class random_ai : public ai_template {
     random_ai(engine* e, std::string n) : ai_template(e, n) { srand(time(NULL)); }
     ~random_ai();
     virtual move next_move();
+    virtual piece_type get_promotion_piece_type();
 };
