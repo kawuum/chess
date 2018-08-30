@@ -296,7 +296,12 @@ bool MainFrame::let_ai_move()
   ai_template* ai = curr_ai.at((int)eng->get_color_to_move());
   if(ai != NULL) {
     move m = ai->next_move();
-    eng->perform_move(m);
+    if(!(m.type == PROMOTION || m.type == CAPTURING_PROMOTION))
+      eng->perform_move(m);
+    else {
+      piece p = piece(ai->get_promotion_piece_type(), eng->get_color_to_move());
+      eng->perform_move(m, p);
+    }
     draw_board(eng->get_current_board());
     return true;
   }

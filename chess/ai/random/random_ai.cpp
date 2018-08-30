@@ -12,5 +12,8 @@ random_ai::~random_ai()
     // do something?
 }
 
+piece_type random_ai::get_promotion_piece_type() {
+    return QUEEN;
+}
 
 
