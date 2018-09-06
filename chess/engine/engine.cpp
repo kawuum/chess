@@ -115,11 +115,12 @@ void engine::perform_move(piece& p,
 
   std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
 
+  
   if (pie.get_piece_type() == PAWN && (std::abs(from_y - to_y) == 2)) {
     // A pawn is getting moved. Since this is a double jump, we need to add an en passant square.
     new_gm->ep_square = std::make_tuple(to_x, (pie.get_piece_color() == piece_color::WHITE ? to_y - 1 : to_y + 1));
   }
-
+  
   new_gm->curr_board = this->gh->curr_board;
   new_gm->curr_board.move_piece(pie, from_x, from_y, to_x, to_y);
   if (mt == CASTLING) {
@@ -151,10 +152,10 @@ void engine::perform_move(piece& p,
   if (pie.get_piece_type() == KING) {
     new_gm->castlingrights[(int) this->gh->to_move] = NONE;
   }
-  if ((pie.get_piece_type() == ROOK && cr != NONE) || (captured_piece.get_piece_type() == ROOK
+  if ((pie.get_piece_type() == ROOK && cr != NONE) || ((mt == CAPTURE || mt == CAPTURING_PROMOTION) && captured_piece.get_piece_type() == ROOK
       && this->gh->castlingrights[(int) captured_piece.get_piece_color()] != NONE)) {
     uint8_t starting_y = this->gh->to_move == piece_color::WHITE ? 0 : 7;
-    if (from_y == starting_y) {
+    if (from_y == starting_y && pie.get_piece_type() == ROOK) {
       if (from_x == 0 && (cr == BOTH || cr == LONG)) {
         // losing long castling privilege
         cr = (castling_rights) (cr - LONG);
@@ -163,7 +164,7 @@ void engine::perform_move(piece& p,
         cr = (castling_rights) (cr - SHORT);
       }
       new_gm->castlingrights[(int) this->gh->to_move] = cr;
-    } else if (to_y == starting_y) {
+    } else if (to_y == starting_y && ((mt == CAPTURE || mt == CAPTURING_PROMOTION) && captured_piece.get_piece_type() == ROOK) ) {
       // A rook was captured, we can eliminate a castling privilege here
       cr = this->gh->castlingrights[(int) captured_piece.get_piece_color()];
       if (to_x == 0 && (cr == BOTH || cr == LONG)) {
@@ -178,7 +179,7 @@ void engine::perform_move(piece& p,
   }
   new_gm->to_move = this->gh->to_move == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
   new_gm->prev = this->gh;
-
+  
   this->gh = new_gm;
   // fetch all legal moves available after the move that was just performed: this way we know whether the game is already over, and we don't need to check for move legality (again) when we perform the next move
   this->legal_moves = mg.generate_all_moves(this->gh.get());
