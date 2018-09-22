@@ -290,7 +290,7 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
 
 bool MainFrame::let_ai_move()
 {
-  if(curr_ai.size() == 0) {
+  if(curr_ai.size() == 0 || eng->get_current_gamestate().result != RUNNING) {
     return false;
   }
   ai_template* ai = curr_ai.at((int)eng->get_color_to_move());
