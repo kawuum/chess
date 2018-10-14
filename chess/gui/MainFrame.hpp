@@ -35,7 +35,7 @@ class MainFrame: public wxFrame {
   wxGridSizer *sizer;
   std::shared_ptr<engine> eng;
   std::vector<ai_template*> ai_list;
-  std::vector<ai_template*> curr_ai;
+  ai_template* curr_ai[2];
 
   wxDECLARE_EVENT_TABLE();
 };

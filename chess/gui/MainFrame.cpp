@@ -31,7 +31,7 @@ MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &si
   this->new_game();
   
   // init AIs
-  curr_ai = std::vector<ai_template*>(2);
+  //curr_ai = std::vector<ai_template*>(2);
   ai_list.push_back(new random_ai(eng.get()));
   
 }
@@ -65,13 +65,12 @@ void MainFrame::OnAddAI(wxCommandEvent& event)
   dialog->ShowModal();
   ai_template* selected = ai_list.at(dialog->GetSelection());
   // add AI
-  curr_ai.at((int)eng->get_color_to_move()) = selected;
+  curr_ai[(int)eng->get_color_to_move()] = selected;
 }
 
 void MainFrame::OnRemoveAI(wxCommandEvent& event)
 {
-  // TODO: remove AI
-  //curr_ai[(int)eng->get_color_to_move()] = ai_template(eng.get(), "");
+  curr_ai[(int)eng->get_color_to_move()] = NULL;
   wxMessageDialog *dialog = new wxMessageDialog(this, "Current color AI was removed", "AI removed");
   dialog->ShowModal();
 }
@@ -290,10 +289,10 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
 
 bool MainFrame::let_ai_move()
 {
-  if(curr_ai.size() == 0 || eng->get_current_gamestate().result != RUNNING) {
+  if(curr_ai[(int)eng->get_color_to_move()] == NULL || eng->get_current_gamestate().result != RUNNING) {
     return false;
   }
-  ai_template* ai = curr_ai.at((int)eng->get_color_to_move());
+  ai_template* ai = curr_ai[(int)eng->get_color_to_move()];
   if(ai != NULL) {
     move m = ai->next_move();
     if(!(m.type == PROMOTION || m.type == CAPTURING_PROMOTION))
