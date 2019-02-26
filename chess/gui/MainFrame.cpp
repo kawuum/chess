@@ -31,8 +31,10 @@ MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &si
   this->new_game();
   
   // init AIs
-  //curr_ai = std::vector<ai_template*>(2);
+  curr_ai[0] = nullptr;
+  curr_ai[1] = nullptr;
   ai_list.push_back(new random_ai(eng.get()));
+
   
 }
 MainFrame::~MainFrame() {
@@ -289,14 +291,16 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
 
 bool MainFrame::let_ai_move()
 {
+          
   if(curr_ai[(int)eng->get_color_to_move()] == NULL || eng->get_current_gamestate().result != RUNNING) {
     return false;
   }
   ai_template* ai = curr_ai[(int)eng->get_color_to_move()];
   if(ai != NULL) {
     move m = ai->next_move();
-    if(!(m.type == PROMOTION || m.type == CAPTURING_PROMOTION))
+    if(!(m.type == PROMOTION || m.type == CAPTURING_PROMOTION)) {
       eng->perform_move(m);
+    }
     else {
       piece p = piece(ai->get_promotion_piece_type(), eng->get_color_to_move());
       eng->perform_move(m, p);
@@ -313,7 +317,6 @@ void MainFrame::draw_board(board &b) {
     for (int x = 0; x < 8; ++x) {
       wxImagePanel *imagePanel;
       piece p = b.get_piece(x, y - 1);
-
       if (p.is_valid()) {
         std::string url = "../gui/images";
         if (p.get_piece_color() == piece_color::WHITE) {
