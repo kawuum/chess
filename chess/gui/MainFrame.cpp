@@ -6,7 +6,7 @@
 
 MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
     : wxFrame(NULL, wxID_ANY, title, pos, size) {
-  panels = (wxImagePanel **) malloc(sizeof(wxImagePanel *) * 64);
+  panels = (wxImagePanel **) calloc(1, sizeof(wxImagePanel *) * 64);
 
   wxMenu *menuFile = new wxMenu;
   menuFile->Append(ID_NewGame, "&New Game\tCtrl-N",
@@ -312,7 +312,11 @@ bool MainFrame::let_ai_move()
 }
 
 void MainFrame::draw_board(board &b) {
-  sizer = new wxGridSizer(8, 0, 0);
+
+  if(sizer == nullptr) {
+    sizer = new wxGridSizer(8, 0, 0);
+  }
+
   for (int y = 8; y > 0; --y) {
     for (int x = 0; x < 8; ++x) {
       wxImagePanel *imagePanel;
@@ -341,7 +345,9 @@ void MainFrame::draw_board(board &b) {
         }
         url = url + ".png";
 
-        imagePanel = new wxImagePanel(this,
+        if(this->panels[x + (8 * (y - 1))] == 0) {
+          printf("Is null\n");
+          imagePanel = new wxImagePanel(this,
                                       url,
                                       80,
                                       80,
@@ -353,10 +359,19 @@ void MainFrame::draw_board(board &b) {
                                                 this,
                                                 std::placeholders::_1,
                                                 std::placeholders::_2));
-        this->panels[x + (8 * (y - 1))] = imagePanel;
+          this->panels[x + (8 * (y - 1))] = imagePanel;
+        } else {
+          printf("Imagepanel not null\n");
+          printf("%u\n", this->panels[x + (8 * (y - 1))]);
+          this->panels[x + (8 * (y - 1))]->setImageFile(url);
+          printf("This worked\n");
+        }
+        
 
       } else {
-        imagePanel = new wxImagePanel(this,
+        if(this->panels[x + (8 * (y - 1))] == 0) {
+          printf("Is null, no image\n");
+          imagePanel = new wxImagePanel(this,
                                       80,
                                       80,
                                       x,
@@ -365,15 +380,27 @@ void MainFrame::draw_board(board &b) {
                                                 this,
                                                 std::placeholders::_1,
                                                 std::placeholders::_2));
-        this->panels[x + (8 * (y - 1))] = imagePanel;
+          this->panels[x + (8 * (y - 1))] = imagePanel;
+        } else {
+          printf("Imgagepanel not null, no image\n");
+          this->panels[x + (8 * (y - 1))]->unsetImage();
+          //this->panels[x + (8 * (y - 1))]->setImageFile(static_cast<wxString>(NULL));
+        }
       }
-      sizer->Add(imagePanel, 1, wxEXPAND);
+
+      if(!sizer_added) { // make sure to only add each imagepanel to sizer once, will result in segfault else
+          printf("Adding imagepanel to sizer...\n");
+          sizer->Add(imagePanel, 1, wxEXPAND);
+          printf("Added.\n");
+      }
     }
   }
   this->SetSizer(sizer);
   this->Layout();
   this->Show(true);
   this->recolor_board();
+  printf("Looks like we're done drawing...\n");
+  sizer_added = true;
 }
 
 

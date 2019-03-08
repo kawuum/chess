@@ -31,6 +31,7 @@ class MainFrame: public wxFrame {
   bool let_ai_move();
 
   bool clicked;
+  bool sizer_added = false;
   std::tuple<uint8_t, uint8_t> clicked_coords;
   wxGridSizer *sizer;
   std::shared_ptr<engine> eng;

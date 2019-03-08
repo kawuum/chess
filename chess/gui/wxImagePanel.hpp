@@ -41,6 +41,8 @@ class wxImagePanel: public wxPanel {
 
   void render(wxDC &dc);
   void setRenderPosition(int pos_x, int pos_y);
+  void setImageFile(wxString file);
+  void unsetImage();
   int getRenderPositionX();
   int getRenderPositionY();
   void mouseDown(wxMouseEvent &event);
