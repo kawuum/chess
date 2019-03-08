@@ -113,6 +113,7 @@ void engine::perform_move(piece& p,
       return; //should we just return here? or maybe ignore if the move seems to be legal?
   */
 
+  printf("Constructor should be called...\n");
   std::shared_ptr<game_history> new_gm = std::make_shared<game_history>();
 
   
@@ -181,6 +182,7 @@ void engine::perform_move(piece& p,
   new_gm->prev = this->gh;
   
   this->gh = new_gm;
+  printf("Was Destructor called?\n");
   // fetch all legal moves available after the move that was just performed: this way we know whether the game is already over, and we don't need to check for move legality (again) when we perform the next move
   this->legal_moves = mg.generate_all_moves(this->gh.get());
 }
@@ -201,6 +203,7 @@ piece_color engine::get_color_to_move() {
 }
 
 game_history engine::get_current_gamestate() {
+  printf("Constructor should NOT get called...\n");
   game_history g = *this->gh;
   return g;
 }

@@ -117,6 +117,17 @@ void wxImagePanel::render(wxDC &dc) {
   }
 }
 
+void wxImagePanel::setImageFile(wxString file) {
+    printf("calling loadfile with parameter %s\n", (const char*)file);
+    original_image.LoadFile(file);
+    printf("loadfile succeeded\n");
+}
+
+void wxImagePanel::unsetImage() {
+    wxImage image;
+    original_image = image;
+}
+
 void wxImagePanel::setRenderPosition(int pos_x, int pos_y) {
   this->pos_x = pos_x;
   this->pos_y = pos_y;
