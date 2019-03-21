@@ -220,7 +220,7 @@ void MainFrame::notify_click(uint8_t x_coord, uint8_t y_coord) {
   } else { // A piece was already clicked, now we need to check if this is a possible move click or a disable piece click
 
     if (std::get<0>(clicked_coords) == x_coord
-        && std::get<1>(clicked_coords) == y_coord) { // Check if this is a diable piece click
+        && std::get<1>(clicked_coords) == y_coord) { // Check if this is a disable piece click
       this->recolor_board();
       clicked = false;
     } else {  // Check if this is a possible move click

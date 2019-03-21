@@ -1,6 +1,9 @@
 #include "MainWindow.h"
 #include <QMenu>
 #include <QMenuBar>
+#include <QGraphicsLinearLayout>
+#include <QGraphicsGridLayout>
+#include <QGridLayout>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
@@ -20,11 +23,18 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   QAction *quit = new QAction("&Quit", this);
   game->addAction(quit);
   // TODO: Read and understand http://doc.qt.io/archives/qt-4.8/signalsandslots.html
-  //connect(new_game, SIGNAL(triggered()), this, SLOT(&MainWindow::new_game()));
-  //connect(undo_move, &QAction::triggered, this, MainWindow::undo_move);
-  //connect(add_ai, &QAction::triggered, this, MainWindow::add_ai);
-  //connect(remove_ai, &QAction::triggered, this, MainWindow::remove_ai);
+  connect(new_game, &QAction::triggered, this, &MainWindow::new_game);
+  connect(undo_move, &QAction::triggered, this, &MainWindow::undo_move);
+  connect(add_ai, &QAction::triggered, this, &MainWindow::add_ai);
+  connect(remove_ai, &QAction::triggered, this, &MainWindow::remove_ai);
   connect(quit, &QAction::triggered, qApp, QApplication::quit);
+
+  widget = new ChessBoardWidget();
+
+  printf("set widget\n");
+  setCentralWidget(widget);
+  printf("widget set\n");
+  setWindowTitle(tr("Chess"));
 }
 
 void MainWindow::new_game()
@@ -43,6 +53,11 @@ void MainWindow::remove_ai()
 void MainWindow::undo_move()
 {
 }
+
+MainWindow::~MainWindow()
+{
+}
+
 
 
 
