@@ -1,0 +1,5 @@
+# Commits that git blame should skip (pure reformatting).
+# Local use: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Format all sources with clang-format
+849cf57e8d489da4f2c1634cdd7ff4d66ba66976
