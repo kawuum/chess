@@ -1,0 +1,8 @@
+# Code style for the chess project: Google style with a few fixed choices.
+# Format a file:  clang-format -i <file>
+BasedOnStyle: Google
+Language: Cpp
+Standard: c++17
+# Always "int* p", never guess from the existing code.
+DerivePointerAlignment: false
+PointerAlignment: Left
