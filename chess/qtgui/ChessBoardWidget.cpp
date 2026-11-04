@@ -8,8 +8,6 @@
 #include <QTimer>
 #include <algorithm>
 
-#include "../ai/random/random_ai.hpp"
-
 namespace {
 
 const QColor kLightSquare(240, 217, 181);
@@ -59,13 +57,10 @@ void ChessBoardWidget::undoMove() {
   afterMove();
 }
 
-void ChessBoardWidget::setAiPlays(piece_color color, bool enabled) {
+void ChessBoardWidget::setPlayer(piece_color color, const ai_info* ai) {
   int index = static_cast<int>(color);
-  if (enabled) {
-    ai_[index] = std::make_unique<random_ai>(&eng_);
-  } else {
-    ai_[index].reset();
-  }
+  // Assigning a new unique_ptr deletes the previous AI automatically.
+  ai_[index] = ai ? ai->create(&eng_) : nullptr;
   clearSelection();
   afterMove();
 }
@@ -131,7 +126,10 @@ QString ChessBoardWidget::statusText() {
       break;
   }
   QString text = QString("%1 to move").arg(colorName(gs.to_move));
-  if (isAiToMove()) text += " (AI)";
+  if (isAiToMove()) {
+    const auto& ai = ai_[static_cast<int>(gs.to_move)];
+    text += QString(" (%1)").arg(QString::fromStdString(ai->get_name()));
+  }
   if (gs.is_check) text += ". Check!";
   return text;
 }

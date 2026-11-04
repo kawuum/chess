@@ -1,6 +1,7 @@
 #include "MainWindow.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QMenuBar>
 #include <QStatusBar>
@@ -25,25 +26,43 @@ MainWindow::MainWindow(QWidget* parent)
 
   game->addSeparator();
 
-  QAction* whiteAi = game->addAction("&White played by AI");
-  whiteAi->setCheckable(true);
-  connect(whiteAi, &QAction::toggled, board_,
-          [this](bool on) { board_->setAiPlays(piece_color::WHITE, on); });
-
-  QAction* blackAi = game->addAction("&Black played by AI");
-  blackAi->setCheckable(true);
-  connect(blackAi, &QAction::toggled, board_,
-          [this](bool on) { board_->setAiPlays(piece_color::BLACK, on); });
-
-  game->addSeparator();
-
   QAction* quit = game->addAction("&Quit");
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, qApp, &QApplication::quit);
+
+  QMenu* players = menuBar()->addMenu("&Players");
+  addPlayerMenu(players, "&White", piece_color::WHITE);
+  addPlayerMenu(players, "&Black", piece_color::BLACK);
 
   connect(board_, &ChessBoardWidget::statusChanged, statusBar(),
           [this](const QString& text) { statusBar()->showMessage(text); });
   // The board emitted its first status in its constructor, before this
   // connection existed, so show it once by hand.
   statusBar()->showMessage(board_->statusText());
+}
+
+void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
+                               piece_color color) {
+  QMenu* menu = parent->addMenu(title);
+  // An exclusive QActionGroup works like radio buttons: checking one entry
+  // unchecks the others.
+  auto* group = new QActionGroup(menu);
+
+  QAction* human = menu->addAction("Human");
+  human->setCheckable(true);
+  human->setChecked(true);
+  group->addAction(human);
+  connect(human, &QAction::triggered, board_,
+          [this, color] { board_->setPlayer(color, nullptr); });
+
+  menu->addSeparator();
+  for (const ai_info& ai : available_ais()) {
+    QAction* action = menu->addAction(QString::fromStdString(ai.name));
+    action->setCheckable(true);
+    group->addAction(action);
+    // The pointer stays valid: available_ais() is a static list.
+    const ai_info* info = &ai;
+    connect(action, &QAction::triggered, board_,
+            [this, color, info] { board_->setPlayer(color, info); });
+  }
 }

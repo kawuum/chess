@@ -27,7 +27,8 @@ add_library(chess_engine STATIC
   datastructures/board.cpp
   engine/engine.cpp
   engine/move_generation.cpp
-  ai/random/random_ai.cpp)
+  ai/random/random_ai.cpp
+  ai/ai_registry.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
 
 # Kleines Testprogramm für die Datenstrukturen

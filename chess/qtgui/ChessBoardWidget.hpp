@@ -8,6 +8,7 @@
 #include <optional>
 #include <vector>
 
+#include "../ai/ai_registry.hpp"
 #include "../ai/template/ai_template.hpp"
 #include "../engine/engine.hpp"
 
@@ -25,8 +26,9 @@ class ChessBoardWidget : public QWidget {
   // Takes back the last move. Against an AI it takes back the AI's answer
   // too, so the human is to move again.
   void undoMove();
-  // Lets the random AI play the given color, or hands it back to a human.
-  void setAiPlays(piece_color color, bool enabled);
+  // Chooses who plays the given color: an AI from available_ais(), or a
+  // human if ai is nullptr.
+  void setPlayer(piece_color color, const ai_info* ai);
   // Whose turn it is, check, or how the game ended.
   QString statusText();
 
