@@ -1,11 +1,12 @@
 #include "MainApp.hpp"
-#include "MainFrame.hpp"
-#include "../engine/engine.hpp"
-#include "../datastructures/consts.hpp"
+
 #include <algorithm>
 
-MainApp::~MainApp() {
-}
+#include "../datastructures/consts.hpp"
+#include "../engine/engine.hpp"
+#include "MainFrame.hpp"
+
+MainApp::~MainApp() {}
 
 bool MainApp::OnInit() {
   wxInitAllImageHandlers();

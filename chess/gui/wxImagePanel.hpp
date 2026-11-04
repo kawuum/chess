@@ -1,54 +1,38 @@
 #ifndef WXIMAGEPANEL_HPP
 #define WXIMAGEPANEL_HPP
 
-#include <wx/wx.h>
 #include <wx/sizer.h>
+#include <wx/wx.h>
+
 #include <cstdint>
 #include <functional>
 
-class wxImagePanel: public wxPanel {
+class wxImagePanel : public wxPanel {
   wxImage original_image;
   int pos_x, pos_y;
   int grid_x, grid_y;
   std::function<void(uint8_t, uint8_t)> notify_click;
 
-
  public:
-  wxImagePanel(wxFrame *parent,
-               int size_x,
-               int size_y,
-               int grid_x,
-               int grid_y,
+  wxImagePanel(wxFrame* parent, int size_x, int size_y, int grid_x, int grid_y,
                std::function<void(uint8_t, uint8_t)> notify_click);
-  wxImagePanel(wxFrame *parent,
-               wxString file,
-               int size_x,
-               int size_y,
-               int grid_x,
-               int grid_y,
+  wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y,
+               int grid_x, int grid_y,
                std::function<void(uint8_t, uint8_t)> notify_click);
-  wxImagePanel(wxFrame *parent,
-               wxString file,
-               int size_x,
-               int size_y,
-               int pos_x,
-               int pos_y,
-               int grid_x,
-               int grid_y,
+  wxImagePanel(wxFrame* parent, wxString file, int size_x, int size_y,
+               int pos_x, int pos_y, int grid_x, int grid_y,
                std::function<void(uint8_t, uint8_t)> notify_click);
 
-  void paintEvent(wxPaintEvent &evt);
+  void paintEvent(wxPaintEvent& evt);
   void paintNow();
 
-  void render(wxDC &dc);
+  void render(wxDC& dc);
   void setRenderPosition(int pos_x, int pos_y);
   void setImageFile(wxString file);
   void unsetImage();
   int getRenderPositionX();
   int getRenderPositionY();
-  void mouseDown(wxMouseEvent &event);
-
-
+  void mouseDown(wxMouseEvent& event);
 
   // some useful events
   /*
@@ -63,6 +47,5 @@ class wxImagePanel: public wxPanel {
 
   DECLARE_EVENT_TABLE();
 };
-
 
 #endif

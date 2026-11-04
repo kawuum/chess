@@ -1,28 +1,29 @@
 #include "MainWindow.h"
+
+#include <QGraphicsGridLayout>
+#include <QGraphicsLinearLayout>
+#include <QGridLayout>
 #include <QMenu>
 #include <QMenuBar>
-#include <QGraphicsLinearLayout>
-#include <QGraphicsGridLayout>
-#include <QGridLayout>
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
-{
-  QMenu *game = menuBar()->addMenu("&Game");
-  QAction *new_game = new QAction("&New Game", this);
-  //new_game->setIcon(QIcon(":/images/new.png"));
-  //new_game->setShortcut(QKeySequence::New);
-  //new_game->setStatusTip(tr("Start a new game"));
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+  QMenu* game = menuBar()->addMenu("&Game");
+  QAction* new_game = new QAction("&New Game", this);
+  // new_game->setIcon(QIcon(":/images/new.png"));
+  // new_game->setShortcut(QKeySequence::New);
+  // new_game->setStatusTip(tr("Start a new game"));
   game->addAction(new_game);
-  QAction *undo_move = new QAction("&Undo Move", this);
+  QAction* undo_move = new QAction("&Undo Move", this);
   game->addAction(undo_move);
-  QAction *add_ai = new QAction("&Add AI", this);
+  QAction* add_ai = new QAction("&Add AI", this);
   game->addAction(add_ai);
-  QAction *remove_ai = new QAction("&Remove AI", this);
+  QAction* remove_ai = new QAction("&Remove AI", this);
   game->addAction(remove_ai);
   game->addSeparator();
-  QAction *quit = new QAction("&Quit", this);
+  QAction* quit = new QAction("&Quit", this);
   game->addAction(quit);
-  // TODO: Read and understand http://doc.qt.io/archives/qt-4.8/signalsandslots.html
+  // TODO: Read and understand
+  // http://doc.qt.io/archives/qt-4.8/signalsandslots.html
   connect(new_game, &QAction::triggered, this, &MainWindow::new_game);
   connect(undo_move, &QAction::triggered, this, &MainWindow::undo_move);
   connect(add_ai, &QAction::triggered, this, &MainWindow::add_ai);
@@ -37,27 +38,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   setWindowTitle(tr("Chess"));
 }
 
-void MainWindow::new_game()
-{
-    qApp->quit();
-}
+void MainWindow::new_game() { qApp->quit(); }
 
-void MainWindow::add_ai()
-{
-}
+void MainWindow::add_ai() {}
 
-void MainWindow::remove_ai()
-{
-}
+void MainWindow::remove_ai() {}
 
-void MainWindow::undo_move()
-{
-}
+void MainWindow::undo_move() {}
 
-MainWindow::~MainWindow()
-{
-}
-
-
-
-
+MainWindow::~MainWindow() {}

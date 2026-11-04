@@ -5,22 +5,11 @@
 #ifndef CHESS_ENUMS_HPP
 #define CHESS_ENUMS_HPP
 
-enum piece_type {
-  KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN
-};
-enum class piece_color {
-  WHITE, BLACK
-};
+enum piece_type { KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN };
+enum class piece_color { WHITE, BLACK };
 
-enum castling_rights {
-  NONE = 0,
-  SHORT = 1,
-  LONG = 2,
-  BOTH = 3
-};
+enum castling_rights { NONE = 0, SHORT = 1, LONG = 2, BOTH = 3 };
 
-enum game_result {
-    RUNNING, DRAW, WHITE_WIN, BLACK_WIN    
-};
+enum game_result { RUNNING, DRAW, WHITE_WIN, BLACK_WIN };
 
-#endif //CHESS_ENUMS_HPP
+#endif  // CHESS_ENUMS_HPP

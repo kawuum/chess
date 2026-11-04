@@ -1,15 +1,13 @@
-#include <iostream>
-#include "piece.hpp"
-#include "bit_matrix.hpp"
 #include <board.hpp>
+#include <iostream>
+
+#include "bit_matrix.hpp"
+#include "piece.hpp"
 
 int main() {
-
-
   piece p{KING, piece_color::WHITE};
 
-  if (p.is_white())
-    std::cout << "Itsa white" << std::endl;
+  if (p.is_white()) std::cout << "Itsa white" << std::endl;
 
   bit_matrix b;
   board boa;
@@ -24,15 +22,19 @@ int main() {
   b.set_bit_at(1, 4);
   b.unset_bit_at(1, 4);
   b.print();
-  std::cout << "Num bits set: " << (int) b.get_num_bits_set() << std::endl << std::endl;
+  std::cout << "Num bits set: " << (int)b.get_num_bits_set() << std::endl
+            << std::endl;
 
   boa.get_bit_matrix_for_piece(p).print();
-  std::cout << "Num of pieces: " << (int) boa.get_num_pieces() << std::endl;
-  std::cout << "Board is " << (boa.is_empty() ? "" : "not ") << "empty" << std::endl;
+  std::cout << "Num of pieces: " << (int)boa.get_num_pieces() << std::endl;
+  std::cout << "Board is " << (boa.is_empty() ? "" : "not ") << "empty"
+            << std::endl;
   boa.clear();
-  std::cout << "Board is now " << (boa.is_empty() ? "" : "still not ") << "empty" << std::endl;
+  std::cout << "Board is now " << (boa.is_empty() ? "" : "still not ")
+            << "empty" << std::endl;
 
-  std::cout << std::endl << "New board with only kings and a white queen..." << std::endl;
+  std::cout << std::endl
+            << "New board with only kings and a white queen..." << std::endl;
   boa.add_piece(p, 4, 0);
   boa.add_piece(piece(QUEEN, piece_color::WHITE), 3, 0);
   boa.add_piece(piece(KING, piece_color::BLACK), 4, 7);

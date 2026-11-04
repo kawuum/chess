@@ -1,5 +1,6 @@
-#include "../datastructures/piece.hpp"
 #include <stdint.h>
+
+#include "../datastructures/piece.hpp"
 
 #ifndef MOVE_HPP
 #define MOVE_HPP
@@ -22,16 +23,18 @@ struct move {
   uint8_t to_y;
   move_type type;
 
-  bool operator==(const move &other) {
-    // since we are (usually) only comparing moves from the same ply, the coordinates should be enough to determine whether two moves are equal
-    return this->from_x == other.from_x && this->from_y == other.from_y && this->to_x == other.to_x
-        && this->to_y == other.to_y;
+  bool operator==(const move& other) {
+    // since we are (usually) only comparing moves from the same ply, the
+    // coordinates should be enough to determine whether two moves are equal
+    return this->from_x == other.from_x && this->from_y == other.from_y &&
+           this->to_x == other.to_x && this->to_y == other.to_y;
   }
-  
-  bool operator!=(const move &other) {
-    // since we are (usually) only comparing moves from the same ply, the coordinates should be enough to determine whether two moves are equal
-    return !(this->from_x == other.from_x && this->from_y == other.from_y && this->to_x == other.to_x
-        && this->to_y == other.to_y);
+
+  bool operator!=(const move& other) {
+    // since we are (usually) only comparing moves from the same ply, the
+    // coordinates should be enough to determine whether two moves are equal
+    return !(this->from_x == other.from_x && this->from_y == other.from_y &&
+             this->to_x == other.to_x && this->to_y == other.to_y);
   }
 };
 
