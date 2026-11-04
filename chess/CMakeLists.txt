@@ -7,7 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # für clangd und clang-tidy
 
 option(CHESS_BUILD_QT "Qt6-GUI bauen" ON)
-option(CHESS_BUILD_WX "wxWidgets-GUI bauen" ON)
 set(CHESS_SANITIZE "" CACHE STRING "Sanitizer, z. B. address,undefined")
 
 find_program(CCACHE_PROGRAM ccache)
@@ -35,8 +34,6 @@ target_include_directories(chess_engine PUBLIC datastructures)
 add_executable(chess_cli main.cpp)
 target_link_libraries(chess_cli PRIVATE chess_engine)
 
-set(CHESS_IMAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gui/images")
-
 if(CHESS_BUILD_QT)
   find_package(Qt6 REQUIRED COMPONENTS Widgets)
   add_executable(chess_qt
@@ -46,16 +43,18 @@ if(CHESS_BUILD_QT)
     qtgui/ChessBoardWidget.cpp
     qtgui/ChessBoardWidget.hpp)
   set_target_properties(chess_qt PROPERTIES AUTOMOC ON)
-  target_compile_definitions(chess_qt PRIVATE CHESS_IMAGE_DIR="${CHESS_IMAGE_DIR}")
   target_link_libraries(chess_qt PRIVATE chess_engine Qt6::Widgets)
-endif()
 
-if(CHESS_BUILD_WX)
-  find_package(wxWidgets REQUIRED COMPONENTS core base)
-  add_executable(chess_wx
-    gui/MainApp.cpp
-    gui/MainFrame.cpp
-    gui/wxImagePanel.cpp)
-  target_compile_definitions(chess_wx PRIVATE CHESS_IMAGE_DIR="${CHESS_IMAGE_DIR}")
-  target_link_libraries(chess_wx PRIVATE chess_engine wxWidgets::wxWidgets)
+  # Piece images are compiled into the binary (Qt resource system), so
+  # chess_qt runs from anywhere. In code: ":/images/white_k.png" etc.
+  set(CHESS_PIECE_IMAGES "")
+  foreach(color white black)
+    foreach(piece k q r b n p)
+      list(APPEND CHESS_PIECE_IMAGES "qtgui/images/${color}_${piece}.png")
+    endforeach()
+  endforeach()
+  qt_add_resources(chess_qt "piece_images"
+    PREFIX "/"
+    BASE "qtgui"
+    FILES ${CHESS_PIECE_IMAGES})
 endif()

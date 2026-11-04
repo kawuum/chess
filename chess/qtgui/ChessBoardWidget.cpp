@@ -235,9 +235,10 @@ void ChessBoardWidget::loadPieceImages() {
   const char letters[] = "kqbnrp";  // same order as enum piece_type
   for (int color = 0; color < 2; ++color) {
     for (int type = 0; type < 6; ++type) {
-      QString file = QString("%1/%2/120px-Chess_tile_%3.png")
-                         .arg(CHESS_IMAGE_DIR)
-                         .arg(color == 0 ? "white_pieces" : "black_pieces")
+      // ":/" means Qt's resource system: the images are compiled into the
+      // binary (see qt_add_resources in CMakeLists.txt).
+      QString file = QString(":/images/%1_%2.png")
+                         .arg(color == 0 ? "white" : "black")
                          .arg(letters[type]);
       QPixmap& img = pieceImages_[color * 6 + type];
       if (!img.load(file))
