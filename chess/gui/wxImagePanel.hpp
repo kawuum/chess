@@ -3,6 +3,7 @@
 
 #include <wx/wx.h>
 #include <wx/sizer.h>
+#include <cstdint>
 #include <functional>
 
 class wxImagePanel: public wxPanel {

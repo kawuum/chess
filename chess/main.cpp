@@ -6,7 +6,7 @@
 int main() {
 
 
-  piece p{KING, WHITE};
+  piece p{KING, piece_color::WHITE};
 
   if (p.is_white())
     std::cout << "Itsa white" << std::endl;
@@ -34,12 +34,12 @@ int main() {
 
   std::cout << std::endl << "New board with only kings and a white queen..." << std::endl;
   boa.add_piece(p, 4, 0);
-  boa.add_piece(piece(QUEEN, WHITE), 3, 0);
-  boa.add_piece(piece(KING, BLACK), 4, 7);
+  boa.add_piece(piece(QUEEN, piece_color::WHITE), 3, 0);
+  boa.add_piece(piece(KING, piece_color::BLACK), 4, 7);
   std::cout << "Showing white pieces:" << std::endl;
-  boa.get_bit_matrix_for_color(WHITE).print();
+  boa.get_bit_matrix_for_color(piece_color::WHITE).print();
   std::cout << "Adding white pawn on queens location..." << std::endl;
-  boa.add_piece(piece(PAWN, WHITE), 3, 0);
+  boa.add_piece(piece(PAWN, piece_color::WHITE), 3, 0);
   std::cout << "Board is " << (boa.check_sanity() ? "" : "not ") << "sane";
 
   return 0;
