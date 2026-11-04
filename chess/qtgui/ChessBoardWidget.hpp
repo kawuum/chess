@@ -1,31 +1,82 @@
-//
-// Created by root on 21.03.19.
-//
-
 #ifndef CHESS_CHESSBOARDWIDGET_HPP
 #define CHESS_CHESSBOARDWIDGET_HPP
 
-#include <QPicture>
+#include <QPixmap>
 #include <QWidget>
+#include <array>
+#include <memory>
+#include <optional>
+#include <vector>
 
-#include "../datastructures/piece.hpp"
+#include "../ai/template/ai_template.hpp"
 #include "../engine/engine.hpp"
-#include "ChessSquare.hpp"
 
+// One widget that draws the whole board and lets the user play by clicking.
+//
+// Board coordinates follow the engine: x is the file (0 = a), y is the rank
+// (0 = rank 1). White is drawn at the bottom, so screen rows are flipped.
 class ChessBoardWidget : public QWidget {
+  Q_OBJECT
+
  public:
-  ChessBoardWidget();
-  ~ChessBoardWidget();
+  explicit ChessBoardWidget(QWidget* parent = nullptr);
+
   void newGame();
+  // Takes back the last move. Against an AI it takes back the AI's answer
+  // too, so the human is to move again.
   void undoMove();
-  void addAi();
-  void removeAi();
+  // Lets the random AI play the given color, or hands it back to a human.
+  void setAiPlays(piece_color color, bool enabled);
+  // Whose turn it is, check, or how the game ended.
+  QString statusText();
+
+ signals:
+  // Short text for the status bar, e.g. "White to move".
+  void statusChanged(const QString& text);
+
+ protected:
+  void paintEvent(QPaintEvent* event) override;
+  void mousePressEvent(QMouseEvent* event) override;
+  QSize sizeHint() const override;
 
  private:
-  ChessSquare* squares[64];
-  engine* eng;
-  void drawBoard();
-  std::string getFilenameForPiece(piece p);
+  struct Square {
+    int x;
+    int y;
+  };
+
+  // Geometry: the board is a square, centered in the widget.
+  int squareSize() const;
+  QPoint boardOrigin() const;
+  QRect squareRect(int x, int y) const;
+  std::optional<Square> squareAt(const QPoint& pos) const;
+
+  void loadPieceImages();
+  const QPixmap& imageFor(piece p) const;
+
+  void selectSquare(Square sq);
+  void clearSelection();
+  void performHumanMove(::move m);
+  std::optional<piece_type> askPromotionPiece();
+
+  // Called after every move: repaint, update status, show game over or let
+  // the AI move next.
+  void afterMove();
+  bool isGameOver();
+  bool isAiToMove();
+  void scheduleAiMove();
+  void performAiMove();
+
+  engine eng_;
+  // AI per color, indexed by (int)piece_color. nullptr means human.
+  std::array<std::unique_ptr<ai_template>, 2> ai_;
+  // Index: color * 6 + piece_type.
+  std::array<QPixmap, 12> pieceImages_;
+
+  std::optional<Square> selected_;
+  std::vector<::move> targets_;  // legal moves of the selected piece
+  bool aiMovePending_ = false;
+  bool gameOverShown_ = false;
 };
 
 #endif  // CHESS_CHESSBOARDWIDGET_HPP

@@ -41,9 +41,9 @@ if(CHESS_BUILD_QT)
   add_executable(chess_qt
     qtgui/MainApp.cpp
     qtgui/MainWindow.cpp
-    qtgui/MainWindow.h
+    qtgui/MainWindow.hpp
     qtgui/ChessBoardWidget.cpp
-    qtgui/ChessSquare.cpp)
+    qtgui/ChessBoardWidget.hpp)
   set_target_properties(chess_qt PROPERTIES AUTOMOC ON)
   target_compile_definitions(chess_qt PRIVATE CHESS_IMAGE_DIR="${CHESS_IMAGE_DIR}")
   target_link_libraries(chess_qt PRIVATE chess_engine Qt6::Widgets)
