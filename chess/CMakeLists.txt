@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # für clangd und clang-tidy
 
 option(CHESS_BUILD_QT "Qt6-GUI bauen" ON)
+option(CHESS_BUILD_TESTS "Tests bauen (GoogleTest)" ON)
 set(CHESS_SANITIZE "" CACHE STRING "Sanitizer, z. B. address,undefined")
 
 find_program(CCACHE_PROGRAM ccache)
@@ -26,6 +27,7 @@ add_library(chess_engine STATIC
   datastructures/board.cpp
   engine/engine.cpp
   engine/move_generation.cpp
+  engine/perft.cpp
   ai/random/random_ai.cpp
   ai/ai_registry.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
@@ -57,4 +59,17 @@ if(CHESS_BUILD_QT)
     PREFIX "/"
     BASE "qtgui"
     FILES ${CHESS_PIECE_IMAGES})
+endif()
+
+# Tests: build with the presets, run with "ctest --preset debug".
+# Deep perft depths only run with CHESS_SLOW_TESTS=1 in the environment.
+if(CHESS_BUILD_TESTS)
+  enable_testing()
+  find_package(GTest REQUIRED)
+  include(GoogleTest)
+  add_executable(chess_tests
+    tests/fen_test.cpp
+    tests/perft_test.cpp)
+  target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
+  gtest_discover_tests(chess_tests)
 endif()
