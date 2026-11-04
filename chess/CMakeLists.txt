@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # für clangd und clang-tidy
 
-option(CHESS_BUILD_QT "Qt5-GUI bauen" ON)
+option(CHESS_BUILD_QT "Qt6-GUI bauen" ON)
 option(CHESS_BUILD_WX "wxWidgets-GUI bauen" ON)
 set(CHESS_SANITIZE "" CACHE STRING "Sanitizer, z. B. address,undefined")
 
@@ -37,7 +37,7 @@ target_link_libraries(chess_cli PRIVATE chess_engine)
 set(CHESS_IMAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gui/images")
 
 if(CHESS_BUILD_QT)
-  find_package(Qt5 REQUIRED COMPONENTS Widgets)
+  find_package(Qt6 REQUIRED COMPONENTS Widgets)
   add_executable(chess_qt
     qtgui/MainApp.cpp
     qtgui/MainWindow.cpp
@@ -46,7 +46,7 @@ if(CHESS_BUILD_QT)
     qtgui/ChessSquare.cpp)
   set_target_properties(chess_qt PROPERTIES AUTOMOC ON)
   target_compile_definitions(chess_qt PRIVATE CHESS_IMAGE_DIR="${CHESS_IMAGE_DIR}")
-  target_link_libraries(chess_qt PRIVATE chess_engine Qt5::Widgets)
+  target_link_libraries(chess_qt PRIVATE chess_engine Qt6::Widgets)
 endif()
 
 if(CHESS_BUILD_WX)
