@@ -3,82 +3,126 @@
 #include <assert.h>
 
 #include <algorithm>
+#include <cctype>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
 #include "move_generation.hpp"
 
-void engine::new_game() {
-  this->legal_moves = std::vector<move>();
-  this->gh = std::make_shared<game_history>();
-  this->gh->num_halfmoves = 0;
-  this->gh->to_move = piece_color::WHITE;
-  this->gh->castlingrights[(int)piece_color::WHITE] = BOTH;
-  this->gh->castlingrights[(int)piece_color::BLACK] = BOTH;
-  this->gh->result = RUNNING;
-  this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 0,
-                                 0);
-  this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE),
-                                 1, 0);
-  this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE),
-                                 2, 0);
-  this->gh->curr_board.add_piece(piece(piece_type::QUEEN, piece_color::WHITE),
-                                 3, 0);
-  this->gh->curr_board.add_piece(piece(piece_type::KING, piece_color::WHITE), 4,
-                                 0);
-  this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::WHITE),
-                                 5, 0);
-  this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::WHITE),
-                                 6, 0);
-  this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::WHITE), 7,
-                                 0);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 0,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 1,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 2,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 3,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 4,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 5,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 6,
-                                 1);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::WHITE), 7,
-                                 1);
+namespace {
 
-  this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::BLACK), 0,
-                                 7);
-  this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::BLACK),
-                                 1, 7);
-  this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::BLACK),
-                                 2, 7);
-  this->gh->curr_board.add_piece(piece(piece_type::QUEEN, piece_color::BLACK),
-                                 3, 7);
-  this->gh->curr_board.add_piece(piece(piece_type::KING, piece_color::BLACK), 4,
-                                 7);
-  this->gh->curr_board.add_piece(piece(piece_type::BISHOP, piece_color::BLACK),
-                                 5, 7);
-  this->gh->curr_board.add_piece(piece(piece_type::KNIGHT, piece_color::BLACK),
-                                 6, 7);
-  this->gh->curr_board.add_piece(piece(piece_type::ROOK, piece_color::BLACK), 7,
-                                 7);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 0,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 1,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 2,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 3,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 4,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 5,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 6,
-                                 6);
-  this->gh->curr_board.add_piece(piece(piece_type::PAWN, piece_color::BLACK), 7,
-                                 6);
+const char* const kStartFen =
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+// Maps a FEN piece letter (KQRBNP / kqrbnp) to a piece.
+piece piece_from_fen_char(char c) {
+  piece_color color = std::isupper(static_cast<unsigned char>(c))
+                          ? piece_color::WHITE
+                          : piece_color::BLACK;
+  switch (std::tolower(static_cast<unsigned char>(c))) {
+    case 'k':
+      return piece(KING, color);
+    case 'q':
+      return piece(QUEEN, color);
+    case 'r':
+      return piece(ROOK, color);
+    case 'b':
+      return piece(BISHOP, color);
+    case 'n':
+      return piece(KNIGHT, color);
+    case 'p':
+      return piece(PAWN, color);
+  }
+  throw std::invalid_argument(std::string("FEN: unknown piece '") + c + "'");
+}
+
+}  // namespace
+
+void engine::new_game() { new_game(kStartFen); }
+
+void engine::new_game(std::string fen) {
+  // A FEN string has six fields separated by spaces, e.g. for the start
+  // position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  std::istringstream in(fen);
+  std::string placement, side, castling, ep;
+  int halfmove_clock = 0, fullmove = 1;
+  if (!(in >> placement >> side >> castling >> ep)) {
+    throw std::invalid_argument("FEN: needs at least 4 fields: " + fen);
+  }
+  in >> halfmove_clock >> fullmove;  // optional, defaults stay if missing
+
+  auto state = std::make_shared<game_history>();
+
+  // 1. Piece placement: rank 8 first, files a to h, digits = empty squares.
+  int x = 0, y = 7;
+  for (char c : placement) {
+    if (c == '/') {
+      if (x != 8) throw std::invalid_argument("FEN: bad rank in " + fen);
+      x = 0;
+      --y;
+    } else if (c >= '1' && c <= '8') {
+      x += c - '0';
+    } else {
+      if (x > 7 || y < 0) throw std::invalid_argument("FEN: too many squares");
+      state->curr_board.add_piece(piece_from_fen_char(c), x, y);
+      ++x;
+    }
+  }
+  if (y != 0 || x != 8) {
+    throw std::invalid_argument("FEN: placement must have 8 ranks: " + fen);
+  }
+
+  // 2. Side to move.
+  if (side != "w" && side != "b") {
+    throw std::invalid_argument("FEN: side to move must be w or b");
+  }
+  state->to_move = side == "w" ? piece_color::WHITE : piece_color::BLACK;
+
+  // 3. Castling rights: K/Q for white, k/q for black, "-" for none.
+  int rights[2] = {NONE, NONE};
+  for (char c : castling) {
+    switch (c) {
+      case 'K':
+        rights[(int)piece_color::WHITE] |= SHORT;
+        break;
+      case 'Q':
+        rights[(int)piece_color::WHITE] |= LONG;
+        break;
+      case 'k':
+        rights[(int)piece_color::BLACK] |= SHORT;
+        break;
+      case 'q':
+        rights[(int)piece_color::BLACK] |= LONG;
+        break;
+      case '-':
+        break;
+      default:
+        throw std::invalid_argument("FEN: bad castling field " + castling);
+    }
+  }
+  state->castlingrights[0] = static_cast<castling_rights>(rights[0]);
+  state->castlingrights[1] = static_cast<castling_rights>(rights[1]);
+
+  // 4. En passant target square, e.g. "e3". (0, 0) means none.
+  if (ep != "-") {
+    if (ep.size() != 2 || ep[0] < 'a' || ep[0] > 'h' || ep[1] < '1' ||
+        ep[1] > '8') {
+      throw std::invalid_argument("FEN: bad en passant square " + ep);
+    }
+    state->ep_square = std::make_tuple(ep[0] - 'a', ep[1] - '1');
+  }
+
+  // 5./6. The engine counts half moves from the start of the game.
+  state->num_halfmoves =
+      (fullmove - 1) * 2 + (state->to_move == piece_color::BLACK ? 1 : 0);
+  (void)halfmove_clock;  // the 50-move rule is not implemented yet
+
+  this->gh = state;
+  // Generate the legal moves right away: this also sets is_check and result
+  // (checkmate or stalemate) for the new position.
+  move_generation mg;
+  this->legal_moves = mg.generate_all_moves(this->gh.get());
 }
 
 std::vector<move> engine::get_legal_moves(uint8_t from_x, uint8_t from_y) {
