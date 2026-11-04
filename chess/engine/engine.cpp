@@ -81,8 +81,7 @@ void engine::new_game() {
                                  6);
 }
 
-std::vector<move> engine::get_legal_moves(piece& p, uint8_t from_x,
-                                          uint8_t from_y) {
+std::vector<move> engine::get_legal_moves(uint8_t from_x, uint8_t from_y) {
   // since this has to be for the current game state, we don't need to call
   // move_generation here if legal_moves is not empty, since we already have all
   // legal moves saved... filter out the approriate ones and return them

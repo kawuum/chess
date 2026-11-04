@@ -165,9 +165,8 @@ void ChessBoardWidget::mousePressEvent(QMouseEvent* event) {
 }
 
 void ChessBoardWidget::selectSquare(Square sq) {
-  piece p = eng_.get_current_board().get_piece(sq.x, sq.y);
   selected_ = sq;
-  targets_ = eng_.get_legal_moves(p, sq.x, sq.y);
+  targets_ = eng_.get_legal_moves(sq.x, sq.y);
   update();
 }
 

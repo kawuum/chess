@@ -4,6 +4,8 @@
 
 #include "board.hpp"
 
+#include <stdexcept>
+
 void board::add_piece(piece p, uint8_t x, uint8_t y) {
   switch (p.get_piece_type()) {
     case BISHOP:
@@ -207,6 +209,10 @@ bit_matrix& board::get_bit_matrix_for_piece(piece p) {
       }
     } break;
   }
+  // Only reached for an invalid piece: piece() leaves type and color unset.
+  // A function returning a reference must not just fall off its end
+  // (undefined behavior), so fail loudly instead.
+  throw std::invalid_argument("get_bit_matrix_for_piece: invalid piece");
 }
 
 void board::move_piece(piece p, uint8_t from_x, uint8_t from_y, uint8_t to_x,

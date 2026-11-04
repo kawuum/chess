@@ -42,13 +42,13 @@ class engine {
    */
   piece_color get_color_to_move();
   /**
-   * Returns all legal moves for the given piece.
-   * @param p The piece we want to find legal moves for
-   * @param from_x x coordinate of the given piece
-   * @param from_y y coordinate of the given piece
-   * @returns A vector containing all legal moves for the given piece
+   * Returns all legal moves of the piece on the given square.
+   * @param from_x x coordinate of the piece
+   * @param from_y y coordinate of the piece
+   * @returns A vector containing all legal moves starting on that square
+   * (empty if there is no piece of the side to move)
    */
-  std::vector<move> get_legal_moves(piece& p, uint8_t from_x, uint8_t from_y);
+  std::vector<move> get_legal_moves(uint8_t from_x, uint8_t from_y);
   /**
    * Returns all legal moves for the player whose turn it is.
    * @param gh A pointer to the current game_history
