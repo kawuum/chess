@@ -73,7 +73,7 @@ std::string ChessBoardWidget::getFilenameForPiece(piece p) {
         return "";
     }
 
-    std::string url = "../gui/images";
+    std::string url = CHESS_IMAGE_DIR;
     if (p.get_piece_color() == piece_color::WHITE) {
         url = url + "/white_pieces";
     } else {

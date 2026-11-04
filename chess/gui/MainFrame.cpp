@@ -322,7 +322,7 @@ void MainFrame::draw_board(board &b) {
       wxImagePanel *imagePanel;
       piece p = b.get_piece(x, y - 1);
       if (p.is_valid()) {
-        std::string url = "../gui/images";
+        std::string url = CHESS_IMAGE_DIR;
         if (p.get_piece_color() == piece_color::WHITE) {
           url = url + "/white_pieces";
         } else {
