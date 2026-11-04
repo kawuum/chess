@@ -203,8 +203,10 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y,
               is_check(b, (move){mover, from_x, from_y, x, from_y, MOVE}))
             break;
         } else if (x == 7) {
-          // rook square, no need to check for check here
-          // since this is the last square, we can add the castling move here
+          // rook square: the castling right says the rook never moved, but
+          // make sure it is really there (it may have been captured)
+          piece rook = b.get_piece(x, from_y);
+          if (!rook.is_valid() || rook.get_piece_type() != ROOK) break;
           moves.push_back((move){mover, from_x, from_y, (uint8_t)(from_x + 2),
                                  from_y, CASTLING});
         } else {
@@ -229,8 +231,12 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y,
               is_check(b, (move){mover, from_x, from_y, x, from_y, MOVE}))
             break;
         } else if (x == 1) {
-          // last square before rook square, no need to check for check here
-          // since this is the last square, we can add the castling move here
+          // b-file: the king never crosses it, so it may be attacked, but the
+          // rook passes it, so it must be empty
+          if (b.get_piece(x, from_y).is_valid()) break;
+          // a-file: the rook must still be there (it may have been captured)
+          piece rook = b.get_piece(0, from_y);
+          if (!rook.is_valid() || rook.get_piece_type() != ROOK) break;
           moves.push_back((move){mover, from_x, from_y, (uint8_t)(from_x - 2),
                                  from_y, CASTLING});
         } else {

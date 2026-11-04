@@ -68,6 +68,7 @@ if(CHESS_BUILD_TESTS)
   find_package(GTest REQUIRED)
   include(GoogleTest)
   add_executable(chess_tests
+    tests/castling_test.cpp
     tests/fen_test.cpp
     tests/perft_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)

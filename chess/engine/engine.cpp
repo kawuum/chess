@@ -234,41 +234,21 @@ void engine::perform_move(piece& p, uint8_t from_x, uint8_t from_y,
   new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
   new_gm->castlingrights[0] = this->gh->castlingrights[0];
   new_gm->castlingrights[1] = this->gh->castlingrights[1];
-  castling_rights cr = this->gh->castlingrights[(int)this->gh->to_move];
-  // handling castling privileges
+  // Castling rights. A king move loses both rights of its side. Any move that
+  // starts or ends on a corner square loses the right that belongs to that
+  // corner: either the rook moved away or it was captured there.
   if (pie.get_piece_type() == KING) {
     new_gm->castlingrights[(int)this->gh->to_move] = NONE;
   }
-  if ((pie.get_piece_type() == ROOK && cr != NONE) ||
-      ((mt == CAPTURE || mt == CAPTURING_PROMOTION) &&
-       captured_piece.get_piece_type() == ROOK &&
-       this->gh->castlingrights[(int)captured_piece.get_piece_color()] !=
-           NONE)) {
-    uint8_t starting_y = this->gh->to_move == piece_color::WHITE ? 0 : 7;
-    if (from_y == starting_y && pie.get_piece_type() == ROOK) {
-      if (from_x == 0 && (cr == BOTH || cr == LONG)) {
-        // losing long castling privilege
-        cr = (castling_rights)(cr - LONG);
-      } else if (from_x == 7 && (cr == BOTH || cr == SHORT)) {
-        // losing short castling privilege
-        cr = (castling_rights)(cr - SHORT);
-      }
-      new_gm->castlingrights[(int)this->gh->to_move] = cr;
-    } else if (to_y == starting_y &&
-               ((mt == CAPTURE || mt == CAPTURING_PROMOTION) &&
-                captured_piece.get_piece_type() == ROOK)) {
-      // A rook was captured, we can eliminate a castling privilege here
-      cr = this->gh->castlingrights[(int)captured_piece.get_piece_color()];
-      if (to_x == 0 && (cr == BOTH || cr == LONG)) {
-        // losing long castling privilege
-        cr = (castling_rights)(cr - LONG);
-      } else if (to_x == 7 && (cr == BOTH || cr == SHORT)) {
-        // losing short castling privilege
-        cr = (castling_rights)(cr - SHORT);
-      }
-      new_gm->castlingrights[(int)captured_piece.get_piece_color()] = cr;
-    }
-  }
+  auto clear_corner = [&new_gm](int x, int y) {
+    if ((x != 0 && x != 7) || (y != 0 && y != 7)) return;
+    int color = (int)(y == 0 ? piece_color::WHITE : piece_color::BLACK);
+    int lost = x == 0 ? LONG : SHORT;
+    new_gm->castlingrights[color] =
+        static_cast<castling_rights>(new_gm->castlingrights[color] & ~lost);
+  };
+  clear_corner(from_x, from_y);
+  clear_corner(to_x, to_y);
   new_gm->to_move = this->gh->to_move == piece_color::WHITE
                         ? piece_color::BLACK
                         : piece_color::WHITE;
