@@ -4,10 +4,6 @@ namespace {
 
 const piece_type kPromotionTypes[] = {QUEEN, ROOK, BISHOP, KNIGHT};
 
-bool is_promotion(const move& m) {
-  return m.type == PROMOTION || m.type == CAPTURING_PROMOTION;
-}
-
 std::vector<move> legal_moves(engine& e) {
   game_history gs = e.get_current_gamestate();
   return e.get_all_legal_moves(&gs);
@@ -63,14 +59,4 @@ std::vector<std::pair<std::string, uint64_t>> perft_divide(engine& e,
     }
   }
   return result;
-}
-
-std::string to_uci(const move& m, piece_type promotion) {
-  std::string s;
-  s += static_cast<char>('a' + m.from_x);
-  s += static_cast<char>('1' + m.from_y);
-  s += static_cast<char>('a' + m.to_x);
-  s += static_cast<char>('1' + m.to_y);
-  if (is_promotion(m)) s += "kqbnrp"[promotion];  // same order as piece_type
-  return s;
 }

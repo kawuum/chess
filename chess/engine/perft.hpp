@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "engine.hpp"
+#include "engine.hpp"  // also brings move.hpp with to_uci()
 
 /**
  * Perft ("performance test"): counts all legal move sequences of the given
@@ -28,9 +28,3 @@ uint64_t perft(engine& e, int depth);
  */
 std::vector<std::pair<std::string, uint64_t>> perft_divide(engine& e,
                                                            int depth);
-
-/**
- * Formats a move in UCI notation: start and target square, e.g. "e2e4",
- * plus the promotion piece for promotions ("e7e8q").
- */
-std::string to_uci(const move& m, piece_type promotion = QUEEN);
