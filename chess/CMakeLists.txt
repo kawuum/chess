@@ -70,7 +70,8 @@ if(CHESS_BUILD_TESTS)
   add_executable(chess_tests
     tests/castling_test.cpp
     tests/fen_test.cpp
-    tests/perft_test.cpp)
+    tests/perft_test.cpp
+    tests/random_ai_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
   gtest_discover_tests(chess_tests)
 endif()
