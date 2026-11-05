@@ -34,6 +34,9 @@ MainWindow::MainWindow(QWidget* parent)
   addPlayerMenu(players, "&White", piece_color::WHITE);
   addPlayerMenu(players, "&Black", piece_color::BLACK);
 
+  QMenu* options = menuBar()->addMenu("&Options");
+  addAiSpeedMenu(options);
+
   connect(board_, &ChessBoardWidget::statusChanged, statusBar(),
           [this](const QString& text) { statusBar()->showMessage(text); });
   // The board emitted its first status in its constructor, before this
@@ -65,4 +68,30 @@ void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
     connect(action, &QAction::triggered, board_,
             [this, color, info] { board_->setPlayer(color, info); });
   }
+}
+
+void MainWindow::addAiSpeedMenu(QMenu* parent) {
+  QMenu* menu = parent->addMenu("&AI vs AI speed");
+  auto* group = new QActionGroup(menu);  // radio buttons, see addPlayerMenu
+
+  struct Choice {
+    const char* text;
+    int delayMs;
+  };
+  const Choice choices[] = {
+      {"Wait for click", ChessBoardWidget::kWaitForClick},
+      {"0.3 s per move", 300},
+      {"1 s per move", 1000},
+      {"2 s per move", 2000},
+  };
+  for (const Choice& choice : choices) {
+    QAction* action = menu->addAction(choice.text);
+    action->setCheckable(true);
+    group->addAction(action);
+    int delay = choice.delayMs;
+    connect(action, &QAction::triggered, board_,
+            [this, delay] { board_->setAiVsAiDelay(delay); });
+  }
+  // The widget starts with "wait for click".
+  group->actions().first()->setChecked(true);
 }

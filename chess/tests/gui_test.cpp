@@ -9,10 +9,18 @@
 #include <QStatusBar>
 #include <QTest>
 #include <algorithm>
+#include <ostream>
 
 #include "../ai/ai_registry.hpp"
 #include "../qtgui/ChessBoardWidget.hpp"
 #include "../qtgui/MainWindow.hpp"
+
+// Lets GoogleTest print a QString as text when a test fails, instead of its
+// raw bytes. GoogleTest finds this function by name (it must be in the same
+// namespace as QString, the global one).
+void PrintTo(const QString& s, std::ostream* os) {
+  *os << '"' << s.toStdString() << '"';
+}
 
 namespace {
 
@@ -57,6 +65,23 @@ class Gui : public testing::Test {
       }
     }
     return nullptr;
+  }
+
+  // An entry of Options > AI vs AI speed.
+  QAction* ai_speed_action(const QString& text) {
+    for (QAction* a : window.menuBar()->actions()) {
+      if (a->text() == "&Options") {
+        QAction* sub = find_action(a->menu(), "&AI vs AI speed");
+        return sub ? find_action(sub->menu(), text) : nullptr;
+      }
+    }
+    return nullptr;
+  }
+
+  // Both colors played by the Random AI, chosen in the menu like a user does.
+  void random_ai_for_both() {
+    find_action(player_menu("&White"), "Random AI")->trigger();
+    find_action(player_menu("&Black"), "Random AI")->trigger();
   }
 
   MainWindow window;
@@ -122,6 +147,38 @@ TEST_F(Gui, AiChosenInMenuAnswersAMove) {
   // The AI moves after a short delay (QTimer), so wait for it.
   EXPECT_TRUE(
       QTest::qWaitFor([&] { return status() == "White to move"; }, 2000));
+}
+
+TEST_F(Gui, AiSpeedStartsWithWaitForClick) {
+  QAction* wait = ai_speed_action("Wait for click");
+  ASSERT_NE(wait, nullptr);
+  EXPECT_TRUE(wait->isChecked());
+}
+
+TEST_F(Gui, AiVsAiWaitsForAClick) {
+  random_ai_for_both();
+  // Switching White to an AI first started the timer of a game against a
+  // human. It runs out during this wait, but must not make a move.
+  QTest::qWait(600);
+  EXPECT_EQ(status(),
+            "White to move (Random AI) - click the board for the next move");
+  click(4, 4);  // any square
+  EXPECT_EQ(status(),
+            "Black to move (Random AI) - click the board for the next move");
+  QTest::qWait(600);  // still nothing happens without a click
+  EXPECT_EQ(status(),
+            "Black to move (Random AI) - click the board for the next move");
+}
+
+TEST_F(Gui, AiVsAiWithDelayPlaysByItself) {
+  random_ai_for_both();
+  // Chosen while the game waits for a click: it goes on by itself.
+  ai_speed_action("0.3 s per move")->trigger();
+  EXPECT_TRUE(QTest::qWaitFor(
+      [&] { return status().startsWith("Black to move"); }, 2000));
+  EXPECT_TRUE(QTest::qWaitFor(
+      [&] { return status().startsWith("White to move"); }, 2000));
+  EXPECT_FALSE(status().contains("click"));
 }
 
 // White pawn on a7, one step before promotion.

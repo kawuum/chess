@@ -45,6 +45,13 @@ class ChessBoardWidget : public QWidget {
   using PromotionChooser = std::function<std::optional<piece_type>()>;
   void setPromotionChooser(PromotionChooser chooser);
 
+  // Pace of games between two AIs, so a human can follow them: every AI move
+  // waits for a click on the board (kWaitForClick, the default), or comes
+  // after a delay in milliseconds. Against a human the AI always moves after
+  // a short fixed delay.
+  static constexpr int kWaitForClick = -1;
+  void setAiVsAiDelay(int ms);
+
  signals:
   // Short text for the status bar, e.g. "White to move".
   void statusChanged(const QString& text);
@@ -79,7 +86,10 @@ class ChessBoardWidget : public QWidget {
   void afterMove();
   bool isGameOver();
   bool isAiToMove();
+  bool isAiVsAi();
+  bool aiVsAiWaitsForClick();
   void scheduleAiMove();
+  void onAiTimer();
   void performAiMove();
 
   engine eng_;
@@ -89,8 +99,10 @@ class ChessBoardWidget : public QWidget {
   std::array<QPixmap, 12> pieceImages_;
 
   std::optional<Square> selected_;
-  std::vector<::move> targets_;  // legal moves of the selected piece
-  bool aiMovePending_ = false;
+  std::vector<::move> targets_;   // legal moves of the selected piece
+  bool aiMovePending_ = false;    // a timer for the next AI move is running
+  bool waitingForClick_ = false;  // the next AI move comes with a click
+  int aiVsAiDelay_ = kWaitForClick;
   bool gameOverShown_ = false;
   PromotionChooser promotionChooser_;  // empty: use the dialog
 };

@@ -18,7 +18,8 @@ const QColor kLastMove(205, 210, 106, 130);
 const QColor kCheck(220, 40, 40, 160);
 const QColor kTarget(20, 85, 30, 110);
 
-// How long the AI "thinks", so a human can follow its moves.
+// How long the AI "thinks" in a game against a human, so the human can
+// follow its moves. Games between two AIs use setAiVsAiDelay() instead.
 constexpr int kAiDelayMs = 300;
 
 const char* colorName(piece_color c) {
@@ -59,6 +60,16 @@ void ChessBoardWidget::setPromotionChooser(PromotionChooser chooser) {
   promotionChooser_ = std::move(chooser);
 }
 
+void ChessBoardWidget::setAiVsAiDelay(int ms) {
+  aiVsAiDelay_ = ms;
+  // Waiting for a click, but clicks are no longer wanted: go on by itself.
+  if (waitingForClick_ && !aiVsAiWaitsForClick()) {
+    waitingForClick_ = false;
+    scheduleAiMove();
+  }
+  emit statusChanged(statusText());
+}
+
 void ChessBoardWidget::undoMove() {
   if (eng_.get_current_gamestate().num_halfmoves == 0) return;
   eng_.undo_move();
@@ -83,16 +94,17 @@ void ChessBoardWidget::setPlayer(piece_color color, const ai_info* ai) {
 
 void ChessBoardWidget::afterMove() {
   update();  // schedules a repaint; Qt calls paintEvent() later
+
+  // Decide first whether an AI moves next (and whether it waits for a click),
+  // so that the status text below already says so.
+  waitingForClick_ = false;
+  if (!isGameOver() && isAiToMove()) scheduleAiMove();
   emit statusChanged(statusText());
 
-  if (isGameOver()) {
-    if (!gameOverShown_) {
-      gameOverShown_ = true;
-      QMessageBox::information(this, "Game over", statusText());
-    }
-    return;
+  if (isGameOver() && !gameOverShown_) {
+    gameOverShown_ = true;
+    QMessageBox::information(this, "Game over", statusText());
   }
-  if (isAiToMove()) scheduleAiMove();
 }
 
 bool ChessBoardWidget::isGameOver() {
@@ -103,16 +115,42 @@ bool ChessBoardWidget::isAiToMove() {
   return ai_[static_cast<int>(eng_.get_color_to_move())] != nullptr;
 }
 
+bool ChessBoardWidget::isAiVsAi() {
+  return ai_[0] != nullptr && ai_[1] != nullptr;
+}
+
+bool ChessBoardWidget::aiVsAiWaitsForClick() {
+  return isAiVsAi() && aiVsAiDelay_ == kWaitForClick;
+}
+
 void ChessBoardWidget::scheduleAiMove() {
-  if (aiMovePending_) return;
+  if (aiMovePending_ || waitingForClick_) return;  // already on its way
+  if (aiVsAiWaitsForClick()) {
+    waitingForClick_ = true;  // mousePressEvent() makes the move
+    return;
+  }
   aiMovePending_ = true;
+  int delay = isAiVsAi() ? aiVsAiDelay_ : kAiDelayMs;
   // Not called directly: the timer returns to Qt's event loop first, so the
   // board is repainted before the AI moves.
-  QTimer::singleShot(kAiDelayMs, this, &ChessBoardWidget::performAiMove);
+  QTimer::singleShot(delay, this, &ChessBoardWidget::onAiTimer);
+}
+
+void ChessBoardWidget::onAiTimer() {
+  aiMovePending_ = false;
+  // While the timer was running, the game may have become AI against AI with
+  // "wait for click" (e.g. the second color was just switched to an AI).
+  if (aiVsAiWaitsForClick() && !isGameOver()) {
+    waitingForClick_ = true;
+    emit statusChanged(statusText());
+    return;
+  }
+  performAiMove();
 }
 
 void ChessBoardWidget::performAiMove() {
   aiMovePending_ = false;
+  waitingForClick_ = false;
   // The situation may have changed while the timer was running (undo, new
   // game, AI switched off).
   if (isGameOver() || !isAiToMove()) return;
@@ -142,12 +180,19 @@ QString ChessBoardWidget::statusText() {
     text += QString(" (%1)").arg(QString::fromStdString(ai->get_name()));
   }
   if (gs.is_check) text += ". Check!";
+  if (waitingForClick_) text += " - click the board for the next move";
   return text;
 }
 
 // ------------------------------------------------------------ user clicks
 
 void ChessBoardWidget::mousePressEvent(QMouseEvent* event) {
+  // AI against AI, waiting for a click: anywhere on the widget plays the
+  // next AI move.
+  if (event->button() == Qt::LeftButton && waitingForClick_) {
+    performAiMove();
+    return;
+  }
   if (event->button() != Qt::LeftButton || isGameOver() || isAiToMove()) {
     return;
   }
