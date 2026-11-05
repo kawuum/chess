@@ -28,6 +28,7 @@ endif()
 # Engine without GUI dependencies
 add_library(chess_engine STATIC
   datastructures/board.cpp
+  engine/draw_rules.cpp
   engine/engine.cpp
   engine/evaluation.cpp
   engine/move_generation.cpp
@@ -87,6 +88,7 @@ if(CHESS_BUILD_TESTS)
     tests/board_test.cpp
     tests/castling_test.cpp
     tests/check_test.cpp
+    tests/draw_test.cpp
     tests/evaluation_test.cpp
     tests/fen_test.cpp
     tests/memory_layout_test.cpp
@@ -95,7 +97,9 @@ if(CHESS_BUILD_TESTS)
     tests/perft_test.cpp
     tests/random_ai_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
-  gtest_discover_tests(chess_tests)
+  # TIMEOUT: a test that hangs (e.g. on a dialog that waits for a click)
+  # fails after 60 s instead of blocking ctest forever.
+  gtest_discover_tests(chess_tests PROPERTIES TIMEOUT 60)
 
   if(CHESS_BUILD_QT)
     find_package(Qt6 REQUIRED COMPONENTS Test)
@@ -103,7 +107,7 @@ if(CHESS_BUILD_TESTS)
     target_link_libraries(chess_gui_tests PRIVATE chess_qtgui Qt6::Test GTest::gtest)
     # Runs without a screen (Qt "offscreen" platform), also on a server.
     gtest_discover_tests(chess_gui_tests
-      PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+      PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60
       DISCOVERY_TIMEOUT 30)
   endif()
 endif()

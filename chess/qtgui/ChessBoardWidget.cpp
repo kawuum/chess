@@ -26,6 +26,22 @@ const char* colorName(piece_color c) {
   return c == piece_color::WHITE ? "White" : "Black";
 }
 
+const char* drawText(draw_reason reason) {
+  switch (reason) {
+    case STALEMATE:
+      return "Stalemate. The game is a draw.";
+    case THREEFOLD_REPETITION:
+      return "Threefold repetition. The game is a draw.";
+    case FIFTY_MOVE_RULE:
+      return "50 moves without capture or pawn move. The game is a draw.";
+    case INSUFFICIENT_MATERIAL:
+      return "Not enough material to checkmate. The game is a draw.";
+    case NO_DRAW:
+      break;
+  }
+  return "The game is a draw.";
+}
+
 }  // namespace
 
 ChessBoardWidget::ChessBoardWidget(QWidget* parent) : QWidget(parent) {
@@ -170,7 +186,7 @@ QString ChessBoardWidget::statusText() {
     case BLACK_WIN:
       return "Checkmate. Black wins.";
     case DRAW:
-      return "Stalemate. The game is a draw.";
+      return drawText(gs.draw);
     case RUNNING:
       break;
   }

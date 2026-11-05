@@ -138,9 +138,12 @@ game_result naive_against_random(piece_color naive_color, uint32_t seed,
 TEST(NaiveAi, BeatsRandomAi) {
   // Regression test for the strength: of 100 games (fixed seeds, colors
   // alternating) the naive AI must win at least 90. With these seeds it won
-  // 97 when the test was written. The games are the same on every run, but
-  // any change to the AI, random_ai or the order of the generated moves
-  // gives other games, so the number may move a little; 90 leaves room.
+  // 97 when the test was written, and 94 since the draw rules: some games
+  // end in a threefold repetition (the naive AI does not plan, and random_ai
+  // may repeat a position by chance). The games are the same on every run,
+  // but any change to the AI, random_ai, the rules or the order of the
+  // generated moves gives other games, so the number may move a little; 90
+  // leaves room.
   // Counter-check: with the material counted the wrong way round it wins
   // only 52.
   constexpr int kGames = 100;

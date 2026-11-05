@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "draw_rules.hpp"
 #include "move_generation.hpp"
 
 namespace {
@@ -114,10 +115,16 @@ void engine::new_game(std::string fen) {
     state->ep_square = std::make_tuple(ep[0] - 'a', ep[1] - '1');
   }
 
-  // 5./6. The engine counts half moves from the start of the game.
+  // 5. Half moves since the last capture or pawn move (50-move rule). At 100
+  // the game is a draw, so larger numbers are stored as 255.
+  if (halfmove_clock < 0) {
+    throw std::invalid_argument("FEN: negative half move clock in " + fen);
+  }
+  state->halfmove_clock = static_cast<uint8_t>(std::min(halfmove_clock, 255));
+
+  // 6. The engine counts half moves from the start of the game.
   state->num_halfmoves =
       (fullmove - 1) * 2 + (state->to_move == piece_color::BLACK ? 1 : 0);
-  (void)halfmove_clock;  // the 50-move rule is not implemented yet
 
   this->gh = state;
   this->legal_moves_history.clear();
@@ -125,6 +132,17 @@ void engine::new_game(std::string fen) {
   // (checkmate or stalemate) for the new position.
   move_generation mg;
   this->legal_moves = mg.generate_all_moves(this->gh.get());
+  apply_draw_rules();
+}
+
+void engine::apply_draw_rules() {
+  if (this->gh->result != RUNNING) return;  // checkmate or stalemate
+  draw_reason reason = draw_rules::applying_rule(*this->gh);
+  if (reason == NO_DRAW) return;
+  this->gh->result = DRAW;
+  this->gh->draw = reason;
+  // The game is over: no more moves, like after checkmate or stalemate.
+  this->legal_moves.clear();
 }
 
 void engine::ensure_legal_moves() {
@@ -223,6 +241,15 @@ void engine::apply_move(move m) {
   }
   this->gh->performed_move = m;
   new_gm->num_halfmoves = this->gh->num_halfmoves + 1;
+  // 50-move rule: a capture or a pawn move starts counting again.
+  const bool capture = captured_piece.is_valid() || mt == ENPASSANT;
+  if (capture || mover.get_piece_type() == PAWN) {
+    new_gm->halfmove_clock = 0;
+  } else if (this->gh->halfmove_clock < 255) {
+    new_gm->halfmove_clock = this->gh->halfmove_clock + 1;
+  } else {
+    new_gm->halfmove_clock = 255;
+  }
   new_gm->castlingrights[0] = this->gh->castlingrights[0];
   new_gm->castlingrights[1] = this->gh->castlingrights[1];
   // Castling rights. A king move loses both rights of its side. Any move that
@@ -254,6 +281,7 @@ void engine::apply_move(move m) {
   // can check its move against this list.
   move_generation mg;
   this->legal_moves = mg.generate_all_moves(this->gh.get());
+  apply_draw_rules();
 }
 
 board& engine::get_current_board() { return this->gh->curr_board; }

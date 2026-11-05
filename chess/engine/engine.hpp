@@ -80,6 +80,13 @@ class engine {
    * @param m A move from the legal move list
    */
   void apply_move(move m);
+  /**
+   * Ends the game as a draw if a draw rule applies to the current position
+   * (repetition, 50-move rule, insufficient material; see draw_rules.hpp).
+   * Called after the legal moves are generated, so a checkmate on the same
+   * move wins.
+   */
+  void apply_draw_rules();
   std::shared_ptr<game_history> gh;
   // Legal moves of the current position (cache, see ensure_legal_moves()).
   std::vector<move> legal_moves;

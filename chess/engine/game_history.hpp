@@ -12,8 +12,19 @@
 // game_history for each move and does not set every field itself. Before,
 // result and ep_square stayed uninitialized, which caused a random
 // "game over" and phantom en passant moves.
+//
+// The order of the members saves memory: the board must start at a multiple
+// of 8 bytes, so after the 4-byte num_halfmoves there are 4 bytes left, which
+// the four 1-byte members fill. That keeps the struct at 200 bytes instead of
+// 208 (see tests/memory_layout_test.cpp).
 struct game_history {
   int num_halfmoves = 0;
+  game_result result = RUNNING;
+  draw_reason draw = NO_DRAW;  // set when result is DRAW
+  bool is_check = false;
+  // Half moves since the last capture or pawn move (50-move rule). One byte
+  // is enough: at 100 the game is a draw.
+  uint8_t halfmove_clock = 0;
   board curr_board;
   std::shared_ptr<game_history> prev;
   piece_color to_move = piece_color::WHITE;
@@ -21,8 +32,6 @@ struct game_history {
   // (0, 0) means "no en passant square"; move_generation relies on this.
   std::tuple<uint8_t, uint8_t> ep_square{0, 0};
   move performed_move{};
-  game_result result = RUNNING;
-  bool is_check = false;
 
   bool operator==(game_history& rhs) {
     // num_halfmoves, color to move and the board should be enough to determine

@@ -31,7 +31,8 @@ TEST(MemoryLayout, Move) {
 
 TEST(MemoryLayout, GameHistory) {
   // One per played move; contains a board (+64 bytes in 2.3) and a move,
-  // castling rights and result (-32 bytes in 2.4).
+  // castling rights and result (-32 bytes in 2.4). The draw reason and the
+  // half move clock (4.4) fill bytes that were padding before: still 200.
   EXPECT_EQ(sizeof(game_history), 200u);
 }
 

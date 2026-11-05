@@ -54,8 +54,10 @@ TEST(Check, BlockedLineIsNoCheck) {
 }
 
 TEST(Check, KingsMayNotTouch) {
+  // The rook on a1 is only there so the position is no draw: king against
+  // king alone is insufficient material, and then there are no moves.
   engine e;
-  e.new_game("8/8/8/4k3/8/4K3/8/8 w - - 0 1");
+  e.new_game("8/8/8/4k3/8/4K3/8/R7 w - - 0 1");
   EXPECT_FALSE(has_move(e, "e3e4"));
   EXPECT_FALSE(has_move(e, "e3d4"));
   EXPECT_TRUE(has_move(e, "e3e2"));

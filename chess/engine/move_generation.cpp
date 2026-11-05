@@ -28,6 +28,7 @@ std::vector<move> move_generation::generate_all_moves(game_history* gh) {
       gh->result = gh->to_move == piece_color::WHITE ? BLACK_WIN : WHITE_WIN;
     } else {
       gh->result = DRAW;
+      gh->draw = STALEMATE;
     }
   }
   return res;

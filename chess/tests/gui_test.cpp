@@ -198,7 +198,10 @@ TEST_F(Gui, NaiveAiTakesAHangingQueen) {
 }
 
 // White pawn on a7, one step before promotion.
-const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K3 w - - 0 1";
+// The rook on h1 keeps enough material on the board: after a promotion to a
+// knight, king and knight against king would be a draw, and the "game over"
+// dialog would wait for a click forever.
+const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K2R w - - 0 1";
 
 TEST_F(Gui, PromotionPlaysTheChosenPiece) {
   // Instead of the dialog, a function chooses the knight.
