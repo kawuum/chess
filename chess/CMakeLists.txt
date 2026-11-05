@@ -31,10 +31,6 @@ add_library(chess_engine STATIC
   ai/ai_registry.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
 
-# Kleines Testprogramm für die Datenstrukturen
-add_executable(chess_cli main.cpp)
-target_link_libraries(chess_cli PRIVATE chess_engine)
-
 # Speed measurement (run in a release build), see bench/chess_bench.cpp
 add_executable(chess_bench bench/chess_bench.cpp)
 target_link_libraries(chess_bench PRIVATE chess_engine)
@@ -80,6 +76,7 @@ if(CHESS_BUILD_TESTS)
   find_package(GTest REQUIRED)
   include(GoogleTest)
   add_executable(chess_tests
+    tests/bit_matrix_test.cpp
     tests/castling_test.cpp
     tests/fen_test.cpp
     tests/memory_layout_test.cpp
