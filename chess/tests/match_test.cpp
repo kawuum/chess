@@ -19,21 +19,21 @@ const ai_info& random_ai_info() { return ai_named("Random AI"); }
 const ai_info& naive_ai_info() { return ai_named("Naive AI"); }
 
 TEST(Match, GameEndsWithAResult) {
-  game_record r = play_game(random_ai_info(), random_ai_info(), 1, 2000);
+  game_record r = play_game(random_ai_info(), random_ai_info(), 1, 2, 2000);
   EXPECT_NE(r.result, RUNNING);  // with the draw rules every game ends
   EXPECT_GT(r.plies, 0);
 }
 
-TEST(Match, SameSeedPlaysSameGame) {
-  game_record a = play_game(naive_ai_info(), random_ai_info(), 7, 500);
-  game_record b = play_game(naive_ai_info(), random_ai_info(), 7, 500);
+TEST(Match, SameSeedsPlaySameGame) {
+  game_record a = play_game(naive_ai_info(), random_ai_info(), 7, 8, 500);
+  game_record b = play_game(naive_ai_info(), random_ai_info(), 7, 8, 500);
   EXPECT_EQ(a.result, b.result);
   EXPECT_EQ(a.draw, b.draw);
   EXPECT_EQ(a.plies, b.plies);
 }
 
 TEST(Match, HalfMoveLimitStopsTheGame) {
-  game_record r = play_game(random_ai_info(), random_ai_info(), 1, 10);
+  game_record r = play_game(random_ai_info(), random_ai_info(), 1, 2, 10);
   EXPECT_EQ(r.result, RUNNING);
   EXPECT_EQ(r.plies, 10);
 }
@@ -51,13 +51,13 @@ TEST(Match, StatsAddUp) {
   EXPECT_GT(s.total_plies, 0);
 }
 
-TEST(Match, ColorsAlternate) {
-  // Two AIs that note which one was created first: play_game() creates
-  // White's AI before Black's.
+TEST(Match, ColorsAlternateAndEachAiHasItsOwnSeed) {
+  // Two AIs that note their creation with the seed they got. play_game()
+  // creates White's AI before Black's, so the order shows the colors.
   std::vector<std::string> created;
   auto noting = [&created](const std::string& name) {
     return ai_info{name, [&created, name](engine* e, uint32_t seed) {
-                     created.push_back(name);
+                     created.push_back(name + " " + std::to_string(seed));
                      return random_ai_info().create(e, seed);
                    }};
   };
@@ -66,11 +66,29 @@ TEST(Match, ColorsAlternate) {
   match_settings settings;
   settings.games = 3;
   settings.max_plies = 2;
+  settings.first_seed = 10;
+  settings.second_seed = 20;
   play_match(first, second, settings);
-  EXPECT_EQ(created, (std::vector<std::string>{"first", "second",   // game 0
-                                               "second", "first",   // game 1
-                                               "first", "second"})  // game 2
+  EXPECT_EQ(
+      created, (std::vector<std::string>{"first 10", "second 20",   // game 0
+                                         "second 21", "first 11",   // game 1
+                                         "first 12", "second 22"})  // game 2
   );
+}
+
+TEST(Match, SameSeedsRepeatTheMatch) {
+  match_settings settings;
+  settings.games = 6;
+  settings.first_seed = 100;
+  settings.second_seed = 200;
+  match_stats a = play_match(random_ai_info(), random_ai_info(), settings);
+  match_stats b = play_match(random_ai_info(), random_ai_info(), settings);
+  EXPECT_EQ(a.total_plies, b.total_plies);
+  EXPECT_EQ(a.first_wins, b.first_wins);
+  // Another seed for only the second AI gives other games.
+  settings.second_seed = 201;
+  match_stats c = play_match(random_ai_info(), random_ai_info(), settings);
+  EXPECT_NE(a.total_plies, c.total_plies);
 }
 
 TEST(Match, WinsAreCountedForTheRightAi) {

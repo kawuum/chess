@@ -30,6 +30,18 @@ TEST(AiRegistry, SameSeedPlaysSameGame) {
   }
 }
 
+TEST(AiRegistry, UsesRandomTellsWhetherTheSeedMatters) {
+  // An AI that uses random numbers plays differently with another seed; one
+  // that does not must ignore the seed (the GUI hides the seed for it).
+  for (const ai_info& info : available_ais()) {
+    if (info.uses_random) {
+      EXPECT_NE(self_play(info, 1, 40), self_play(info, 2, 40)) << info.name;
+    } else {
+      EXPECT_EQ(self_play(info, 1, 40), self_play(info, 2, 40)) << info.name;
+    }
+  }
+}
+
 TEST(AiRegistry, NamesAreUnique) {
   const auto& ais = available_ais();
   for (size_t i = 0; i < ais.size(); ++i) {

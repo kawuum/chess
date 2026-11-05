@@ -20,12 +20,12 @@ struct game_record {
 };
 
 /**
- * Plays one game from the start position. White's AI is created with seed,
- * Black's with seed + 1, so the same seed always gives the same game. The
- * game ends with checkmate, a draw, or after max_plies half moves.
+ * Plays one game from the start position. Each AI gets its own seed, so the
+ * same two seeds always give the same game. The game ends with checkmate, a
+ * draw, or after max_plies half moves.
  */
-game_record play_game(const ai_info& white, const ai_info& black, uint32_t seed,
-                      int max_plies);
+game_record play_game(const ai_info& white, const ai_info& black,
+                      uint32_t white_seed, uint32_t black_seed, int max_plies);
 
 /** Results of a match between a first and a second AI. */
 struct match_stats {
@@ -41,7 +41,11 @@ struct match_stats {
 struct match_settings {
   int games = 100;
   int max_plies = 500;  // a game that is still running then is unfinished
-  uint32_t seed = 1;    // game i uses seed + 2 * i (see play_game)
+  // Seeds of the two AIs. In game i the first AI plays with first_seed + i,
+  // the second with second_seed + i: every game is different, and the same
+  // seeds repeat the whole match.
+  uint32_t first_seed = 1;
+  uint32_t second_seed = 2;
 };
 
 /**

@@ -1,43 +1,36 @@
 #include "SimulationDialog.hpp"
 
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStringList>
 #include <QThread>
 #include <QVBoxLayout>
+#include <random>
+
+namespace {
+
+// Seeds the user can type, and the range random seeds are drawn from.
+constexpr int kMaxSeed = 999999999;
+
+}  // namespace
 
 SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
   setWindowTitle("Simulate games");
 
-  firstAi_ = new QComboBox(this);
-  secondAi_ = new QComboBox(this);
-  for (const ai_info& ai : available_ais()) {
-    firstAi_->addItem(QString::fromStdString(ai.name));
-    secondAi_->addItem(QString::fromStdString(ai.name));
-  }
   games_ = new QSpinBox(this);
   games_->setRange(1, 100000);
   games_->setValue(100);
-  seed_ = new QSpinBox(this);
-  seed_->setRange(1, 1000000);
-  seed_->setValue(1);
-  seed_->setToolTip("The same seed plays the same games again.");
-
-  // Object names let the GUI tests find the widgets.
-  firstAi_->setObjectName("firstAi");
-  secondAi_->setObjectName("secondAi");
-  games_->setObjectName("games");
-
+  games_->setObjectName("games");  // object names let tests find widgets
   auto* form = new QFormLayout;
-  form->addRow("First AI:", firstAi_);
-  form->addRow("Second AI:", secondAi_);
   form->addRow("Games:", games_);
-  form->addRow("Seed:", seed_);
 
   startButton_ = new QPushButton("Start", this);
   stopButton_ = new QPushButton("Stop", this);
@@ -62,13 +55,78 @@ SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
   result_->setWordWrap(true);
   result_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
+  auto* choosers = new QHBoxLayout;
+  choosers->addWidget(createChooser("First AI", "first", first_));
+  choosers->addWidget(createChooser("Second AI", "second", second_));
+
   auto* layout = new QVBoxLayout(this);
+  layout->addLayout(choosers);
   layout->addLayout(form);
   layout->addLayout(buttons);
   layout->addWidget(progress_);
   layout->addWidget(result_);
 
   setRunning(false);
+}
+
+QGroupBox* SimulationDialog::createChooser(const QString& title,
+                                           const QString& name,
+                                           AiChooser& chooser) {
+  auto* box = new QGroupBox(title, this);
+
+  chooser.ai = new QComboBox(box);
+  for (const ai_info& ai : available_ais()) {
+    chooser.ai->addItem(QString::fromStdString(ai.name));
+  }
+  chooser.ai->setObjectName(name + "Ai");
+
+  chooser.randomSeed = new QCheckBox("Random seed", box);
+  chooser.randomSeed->setChecked(true);
+  chooser.randomSeed->setObjectName(name + "RandomSeed");
+  chooser.seed = new QSpinBox(box);
+  chooser.seed->setRange(0, kMaxSeed);
+  chooser.seed->setValue(1);
+  chooser.seed->setEnabled(false);  // "Random seed" is checked
+  chooser.seed->setObjectName(name + "Seed");
+  chooser.seed->setToolTip("The same seed plays the same games again.");
+  // The checkbox greys out the field: a random seed is drawn at the start.
+  connect(chooser.randomSeed, &QCheckBox::toggled, chooser.seed,
+          [&chooser](bool random) { chooser.seed->setEnabled(!random); });
+
+  chooser.seedRow = new QWidget(box);
+  chooser.seedRow->setObjectName(name + "SeedRow");
+  auto* seedLayout = new QHBoxLayout(chooser.seedRow);
+  seedLayout->setContentsMargins(0, 0, 0, 0);
+  seedLayout->addWidget(new QLabel("Seed:", chooser.seedRow));
+  seedLayout->addWidget(chooser.seed, 1);
+  seedLayout->addWidget(chooser.randomSeed);
+
+  connect(chooser.ai, &QComboBox::currentIndexChanged, this,
+          [this, &chooser] { updateSeedRow(chooser); });
+  updateSeedRow(chooser);
+
+  auto* layout = new QVBoxLayout(box);
+  layout->addWidget(chooser.ai);
+  layout->addWidget(chooser.seedRow);
+  layout->addStretch();
+  return box;
+}
+
+const ai_info& SimulationDialog::selectedAi(const AiChooser& chooser) const {
+  return available_ais()[chooser.ai->currentIndex()];
+}
+
+void SimulationDialog::updateSeedRow(AiChooser& chooser) {
+  chooser.seedRow->setVisible(selectedAi(chooser).uses_random);
+}
+
+uint32_t SimulationDialog::seedFor(AiChooser& chooser) {
+  if (chooser.randomSeed->isChecked()) {
+    std::uniform_int_distribution<int> draw(0, kMaxSeed);
+    std::random_device device;
+    chooser.seed->setValue(draw(device));
+  }
+  return static_cast<uint32_t>(chooser.seed->value());
 }
 
 SimulationDialog::~SimulationDialog() {
@@ -85,15 +143,25 @@ void SimulationDialog::start() {
   if (thread_) thread_->wait();  // the last simulation has ended already
 
   // Pointers into available_ais(): that list lives as long as the program.
-  const ai_info* first = &available_ais()[firstAi_->currentIndex()];
-  const ai_info* second = &available_ais()[secondAi_->currentIndex()];
+  const ai_info* first = &selectedAi(first_);
+  const ai_info* second = &selectedAi(second_);
   match_settings settings;
   settings.games = games_->value();
   settings.max_plies = kMaxPlies;
-  settings.seed = static_cast<uint32_t>(seed_->value());
+  settings.first_seed = seedFor(first_);
+  settings.second_seed = seedFor(second_);
 
-  firstName_ = firstAi_->currentText();
-  secondName_ = secondAi_->currentText();
+  firstName_ = first_.ai->currentText();
+  secondName_ = second_.ai->currentText();
+  // Name the seeds of the AIs that use them, so the games can be repeated.
+  QStringList seeds;
+  if (first->uses_random) {
+    seeds << QString("first AI %1").arg(settings.first_seed);
+  }
+  if (second->uses_random) {
+    seeds << QString("second AI %1").arg(settings.second_seed);
+  }
+  seedsText_ = seeds.isEmpty() ? QString() : "Seeds: " + seeds.join(", ");
   plannedGames_ = settings.games;
   progress_->setRange(0, settings.games);
   progress_->setValue(0);
@@ -147,15 +215,19 @@ void SimulationDialog::setRunning(bool running) {
   running_ = running;
   startButton_->setEnabled(!running);
   stopButton_->setEnabled(running);
-  firstAi_->setEnabled(!running);
-  secondAi_->setEnabled(!running);
   games_->setEnabled(!running);
-  seed_->setEnabled(!running);
+  for (AiChooser* chooser : {&first_, &second_}) {
+    chooser->ai->setEnabled(!running);
+    chooser->randomSeed->setEnabled(!running);
+    chooser->seed->setEnabled(!running && !chooser->randomSeed->isChecked());
+  }
 }
 
 QString SimulationDialog::describeStats(const match_stats& stats) const {
-  return QString::fromStdString(
+  QString text = QString::fromStdString(
       describe(stats, firstName_.toStdString(), secondName_.toStdString()));
+  if (!seedsText_.isEmpty()) text += seedsText_ + "\n";
+  return text;
 }
 
 QString SimulationDialog::resultText() const { return result_->text(); }

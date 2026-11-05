@@ -4,6 +4,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QMenu>
 #include <QMenuBar>
@@ -264,6 +265,51 @@ TEST_F(Gui, DialogCanBeDeletedWhileSimulating) {
   delete dialog;
   QTest::qWait(200);
   EXPECT_EQ(window.findChild<SimulationDialog*>(), nullptr);
+}
+
+TEST_F(Gui, RandomSeedCheckboxGreysOutTheSeed) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Naive AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  for (const char* name : {"first", "second"}) {
+    auto* random = dialog->findChild<QCheckBox*>(QString(name) + "RandomSeed");
+    auto* seed = dialog->findChild<QSpinBox*>(QString(name) + "Seed");
+    EXPECT_TRUE(random->isChecked()) << name;  // the default
+    EXPECT_FALSE(seed->isEnabled()) << name;
+    random->setChecked(false);
+    EXPECT_TRUE(seed->isEnabled()) << name;
+  }
+}
+
+TEST_F(Gui, SeedRowOnlyForAisThatUseRandom) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  auto* combo = dialog->findChild<QComboBox*>("firstAi");
+  auto* row = dialog->findChild<QWidget*>("firstSeedRow");
+  for (const ai_info& ai : available_ais()) {
+    combo->setCurrentText(QString::fromStdString(ai.name));
+    EXPECT_EQ(row->isVisible(), ai.uses_random) << ai.name;
+  }
+}
+
+TEST_F(Gui, RandomSeedIsShownAndRepeatsTheSimulation) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Naive AI", 6);
+  ASSERT_NE(dialog, nullptr);
+  auto run = [&] {
+    click_button(dialog, "start");
+    EXPECT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+    return dialog->resultText();
+  };
+  QString first_run = run();  // with random seeds, drawn now
+  // The drawn seeds are in the fields and named in the result.
+  int seed1 = dialog->findChild<QSpinBox*>("firstSeed")->value();
+  int seed2 = dialog->findChild<QSpinBox*>("secondSeed")->value();
+  EXPECT_TRUE(first_run.contains(
+      QString("Seeds: first AI %1, second AI %2").arg(seed1).arg(seed2)))
+      << first_run.toStdString();
+  // With these seeds fixed, the same games are played again.
+  dialog->findChild<QCheckBox*>("firstRandomSeed")->setChecked(false);
+  dialog->findChild<QCheckBox*>("secondRandomSeed")->setChecked(false);
+  EXPECT_EQ(run(), first_run);
 }
 
 // White pawn on a7, one step before promotion.

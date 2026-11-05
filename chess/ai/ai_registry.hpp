@@ -18,6 +18,9 @@ struct ai_info {
   // seed starts its random generator: the same seed gives the same moves in
   // the same positions, so simulated games can be repeated exactly.
   std::function<std::unique_ptr<ai_template>(engine*, uint32_t seed)> create;
+  // True if the AI uses random numbers at all (then the seed matters). A GUI
+  // shows the seed only for such AIs.
+  bool uses_random = false;
 };
 
 /**

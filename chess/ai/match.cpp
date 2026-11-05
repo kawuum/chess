@@ -15,12 +15,12 @@ std::string with_percent(int count, int games) {
 
 }  // namespace
 
-game_record play_game(const ai_info& white, const ai_info& black, uint32_t seed,
-                      int max_plies) {
+game_record play_game(const ai_info& white, const ai_info& black,
+                      uint32_t white_seed, uint32_t black_seed, int max_plies) {
   engine e;
   e.new_game();
-  std::unique_ptr<ai_template> white_ai = white.create(&e, seed);
-  std::unique_ptr<ai_template> black_ai = black.create(&e, seed + 1);
+  std::unique_ptr<ai_template> white_ai = white.create(&e, white_seed);
+  std::unique_ptr<ai_template> black_ai = black.create(&e, black_seed);
 
   game_record record;
   while (e.get_current_gamestate().result == RUNNING &&
@@ -43,8 +43,12 @@ match_stats play_match(
     const bool first_is_white = game % 2 == 0;
     const ai_info& white = first_is_white ? first : second;
     const ai_info& black = first_is_white ? second : first;
+    const uint32_t first_seed = settings.first_seed + game;
+    const uint32_t second_seed = settings.second_seed + game;
+    const uint32_t white_seed = first_is_white ? first_seed : second_seed;
+    const uint32_t black_seed = first_is_white ? second_seed : first_seed;
     game_record record =
-        play_game(white, black, settings.seed + 2 * game, settings.max_plies);
+        play_game(white, black, white_seed, black_seed, settings.max_plies);
 
     ++stats.games;
     stats.total_plies += record.plies;
