@@ -32,6 +32,7 @@ add_library(chess_engine STATIC
   engine/engine.cpp
   engine/evaluation.cpp
   engine/move_generation.cpp
+  engine/notation.cpp
   engine/perft.cpp
   ai/random/random_ai.cpp
   ai/naive/naive_ai.cpp
@@ -99,6 +100,7 @@ if(CHESS_BUILD_TESTS)
     tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
     tests/naive_ai_test.cpp
+    tests/notation_test.cpp
     tests/perft_test.cpp
     tests/random_ai_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
