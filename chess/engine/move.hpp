@@ -7,7 +7,7 @@
 #ifndef MOVE_HPP
 #define MOVE_HPP
 
-enum move_type {
+enum move_type : uint8_t {
   NO_MOVE,
   MOVE,
   CAPTURE,

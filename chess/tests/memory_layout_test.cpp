@@ -19,17 +19,19 @@ TEST(MemoryLayout, Board) {
 }
 
 TEST(MemoryLayout, Piece) {
-  // bool + two 4-byte enums. 2 bytes would be enough (plan, phase 2).
-  EXPECT_EQ(sizeof(piece), 12u);
+  // bool + two 1-byte enums (12 bytes with 4-byte enums before 2.4).
+  EXPECT_EQ(sizeof(piece), 3u);
 }
 
 TEST(MemoryLayout, Move) {
-  EXPECT_EQ(sizeof(move), 20u);  // piece + 4 coordinates + 4-byte move_type
+  // piece + 4 coordinates + 1-byte move_type (20 bytes before 2.4).
+  EXPECT_EQ(sizeof(move), 8u);
 }
 
 TEST(MemoryLayout, GameHistory) {
-  // One per played move; contains a board (+64 bytes since 2.3).
-  EXPECT_EQ(sizeof(game_history), 232u);
+  // One per played move; contains a board (+64 bytes in 2.3) and a move,
+  // castling rights and result (-32 bytes in 2.4).
+  EXPECT_EQ(sizeof(game_history), 200u);
 }
 
 TEST(MemoryLayout, Engine) {
