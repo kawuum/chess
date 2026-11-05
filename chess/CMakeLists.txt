@@ -35,7 +35,8 @@ add_library(chess_engine STATIC
   engine/perft.cpp
   ai/random/random_ai.cpp
   ai/naive/naive_ai.cpp
-  ai/ai_registry.cpp)
+  ai/ai_registry.cpp
+  ai/match.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
 
 # Speed measurement (run in a release build), see bench/chess_bench.cpp
@@ -92,6 +93,7 @@ if(CHESS_BUILD_TESTS)
     tests/draw_test.cpp
     tests/evaluation_test.cpp
     tests/fen_test.cpp
+    tests/match_test.cpp
     tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
     tests/naive_ai_test.cpp
