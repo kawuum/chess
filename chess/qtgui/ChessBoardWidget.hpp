@@ -2,6 +2,7 @@
 #define CHESS_CHESSBOARDWIDGET_HPP
 
 #include <QPixmap>
+#include <QStringList>
 #include <QWidget>
 #include <array>
 #include <functional>
@@ -18,6 +19,8 @@
 //
 // Board coordinates follow the engine: x is the file (0 = a), y is the rank
 // (0 = rank 1). White is drawn at the bottom, so screen rows are flipped.
+class QVariantAnimation;
+
 class ChessBoardWidget : public QWidget {
   Q_OBJECT
 
@@ -52,9 +55,26 @@ class ChessBoardWidget : public QWidget {
   static constexpr int kWaitForClick = -1;
   void setAiVsAiDelay(int ms);
 
+  // For the side panel: the moves of this game in algebraic notation ("e4",
+  // "Nf3", ...), and how many half moves were played before the first of
+  // them (more than 0 if the game started from a loaded position).
+  const QStringList& moveList() const { return moveList_; }
+  int firstHalfmove() const { return firstHalfmove_; }
+  // "Human" or the name of the AI that plays the color.
+  QString playerName(piece_color color) const;
+  piece_color colorToMove();
+  bool isGameOver();
+  // An AI plays the side to move; it may be waiting for a click.
+  bool isAiToMove();
+  bool isWaitingForClick() const { return waitingForClick_; }
+  // Material of White minus material of Black, in pawns (e.g. +3).
+  int materialBalance();
+
  signals:
   // Short text for the status bar, e.g. "White to move".
   void statusChanged(const QString& text);
+  // A move was played or taken back, or a new game started.
+  void movesChanged();
 
  protected:
   void paintEvent(QPaintEvent* event) override;
@@ -73,30 +93,46 @@ class ChessBoardWidget : public QWidget {
   QRect squareRect(int x, int y) const;
   std::optional<Square> squareAt(const QPoint& pos) const;
 
-  void loadPieceImages();
+  // Renders the 12 SVG piece images for squares of the given size.
+  void renderPieceImages(int size);
   const QPixmap& imageFor(piece p) const;
 
   void selectSquare(Square sq);
   void clearSelection();
+  // Every move of the game goes through here: notation, engine, animation.
+  void playMove(const ::move& m);
+  // After newGame() and loadPosition(): empty move list, no animation.
+  void startedNewGame();
   void performHumanMove(::move m);
   std::optional<piece_type> askPromotionPiece();
 
   // Called after every move: repaint, update status, show game over or let
   // the AI move next.
   void afterMove();
-  bool isGameOver();
-  bool isAiToMove();
   bool isAiVsAi();
   bool aiVsAiWaitsForClick();
   void scheduleAiMove();
   void onAiTimer();
   void performAiMove();
 
+  // A move is shown as a short slide of the piece. The engine has made the
+  // move already; only the drawing lags behind.
+  struct Slide {
+    piece moving;  // the piece as it stands on the target square
+    Square from;
+    Square to;
+  };
+  void startAnimation(const ::move& m);
+  void stopAnimation();
+
   engine eng_;
   // AI per color, indexed by (int)piece_color. nullptr means human.
   std::array<std::unique_ptr<ai_template>, 2> ai_;
-  // Index: color * 6 + piece_type.
+  // Index: color * 6 + piece_type. Rendered for renderedSize_ (square size
+  // in points) and renderedRatio_ (pixels per point of the screen).
   std::array<QPixmap, 12> pieceImages_;
+  int renderedSize_ = 0;
+  qreal renderedRatio_ = 0;
 
   std::optional<Square> selected_;
   std::vector<::move> targets_;   // legal moves of the selected piece
@@ -105,6 +141,11 @@ class ChessBoardWidget : public QWidget {
   int aiVsAiDelay_ = kWaitForClick;
   bool gameOverShown_ = false;
   PromotionChooser promotionChooser_;  // empty: use the dialog
+
+  QStringList moveList_;
+  int firstHalfmove_ = 0;
+  std::vector<Slide> slides_;               // pieces sliding right now
+  QVariantAnimation* animation_ = nullptr;  // 0 to 1 while sliding
 };
 
 #endif  // CHESS_CHESSBOARDWIDGET_HPP

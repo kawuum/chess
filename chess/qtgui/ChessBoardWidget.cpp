@@ -1,23 +1,34 @@
 #include "ChessBoardWidget.hpp"
 
+#include <QImageReader>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QTimer>
+#include <QVariantAnimation>
 #include <algorithm>
 #include <random>
 #include <utility>
 
+#include "../engine/evaluation.hpp"
+#include "../engine/notation.hpp"
+
 namespace {
 
-const QColor kLightSquare(240, 217, 181);
-const QColor kDarkSquare(181, 136, 99);
-const QColor kSelected(246, 246, 105, 170);
-const QColor kLastMove(205, 210, 106, 130);
-const QColor kCheck(220, 40, 40, 160);
-const QColor kTarget(20, 85, 30, 110);
+// Green and cream, the classic colors of tournament boards.
+const QColor kLightSquare(238, 238, 210);
+const QColor kDarkSquare(118, 150, 86);
+// Translucent layers over the squares.
+const QColor kSelected(255, 255, 80, 150);
+const QColor kLastMove(255, 255, 80, 95);
+const QColor kCheck(230, 40, 40, 220);  // center of the glow
+const QColor kTarget(20, 40, 10, 60);
+const QColor kBoardEdge(0, 0, 0, 60);
+
+constexpr qreal kCornerRadius = 6;  // rounded corners of the board
+constexpr int kSlideMs = 150;       // how long a piece slides to its square
 
 // How long the AI "thinks" in a game against a human, so the human can
 // follow its moves. Games between two AIs use setAiVsAiDelay() instead.
@@ -47,8 +58,7 @@ const char* drawText(draw_reason reason) {
 
 ChessBoardWidget::ChessBoardWidget(QWidget* parent) : QWidget(parent) {
   setMinimumSize(240, 240);
-  loadPieceImages();
-  newGame();
+  newGame();  // the piece images are rendered at the first paint
 }
 
 QSize ChessBoardWidget::sizeHint() const { return QSize(640, 640); }
@@ -57,16 +67,47 @@ QSize ChessBoardWidget::sizeHint() const { return QSize(640, 640); }
 
 void ChessBoardWidget::newGame() {
   eng_.new_game();
-  gameOverShown_ = false;
-  clearSelection();
-  afterMove();
+  startedNewGame();
 }
 
 void ChessBoardWidget::loadPosition(const std::string& fen) {
   eng_.new_game(fen);
+  startedNewGame();
+}
+
+void ChessBoardWidget::startedNewGame() {
+  // A position from a FEN may be from the middle of a game: the move list
+  // then starts with that move number.
+  firstHalfmove_ = eng_.get_current_gamestate().num_halfmoves;
+  moveList_.clear();
+  stopAnimation();
   gameOverShown_ = false;
   clearSelection();
+  emit movesChanged();
   afterMove();
+}
+
+void ChessBoardWidget::playMove(const ::move& m) {
+  // The notation needs the position before the move ("Nbd2", "exd5"), the
+  // animation the one after it.
+  moveList_.push_back(QString::fromStdString(to_san(eng_, m)));
+  eng_.perform_move(m);
+  startAnimation(m);
+  emit movesChanged();
+  afterMove();
+}
+
+QString ChessBoardWidget::playerName(piece_color color) const {
+  const auto& ai = ai_[static_cast<int>(color)];
+  return ai ? QString::fromStdString(ai->get_name()) : QString("Human");
+}
+
+piece_color ChessBoardWidget::colorToMove() { return eng_.get_color_to_move(); }
+
+int ChessBoardWidget::materialBalance() {
+  const board& b = eng_.get_current_board();
+  return evaluation::material(b, piece_color::WHITE) -
+         evaluation::material(b, piece_color::BLACK);
 }
 
 piece ChessBoardWidget::pieceAt(int x, int y) {
@@ -88,16 +129,22 @@ void ChessBoardWidget::setAiVsAiDelay(int ms) {
 }
 
 void ChessBoardWidget::undoMove() {
-  if (eng_.get_current_gamestate().num_halfmoves == 0) return;
+  // Every move of this game is in the move list, so an empty list means
+  // there is nothing to take back (also after loading a position).
+  if (moveList_.isEmpty()) return;
   eng_.undo_move();
+  moveList_.pop_back();
   // Against an AI, also take back its answer so the human is to move again.
   // With two AIs (or none) one move back is enough.
   bool oneAi = (ai_[0] == nullptr) != (ai_[1] == nullptr);
-  if (oneAi && isAiToMove() && eng_.get_current_gamestate().num_halfmoves > 0) {
+  if (oneAi && isAiToMove() && !moveList_.isEmpty()) {
     eng_.undo_move();
+    moveList_.pop_back();
   }
+  stopAnimation();
   gameOverShown_ = false;
   clearSelection();
+  emit movesChanged();
   afterMove();
 }
 
@@ -177,8 +224,7 @@ void ChessBoardWidget::performAiMove() {
   ai_template* ai = ai_[static_cast<int>(eng_.get_color_to_move())].get();
   ::move m = ai->next_move();
   if (m.type == NO_MOVE) return;
-  eng_.perform_move(m);  // a promotion already contains the AI's piece
-  afterMove();
+  playMove(m);  // a promotion already contains the AI's piece
 }
 
 QString ChessBoardWidget::statusText() {
@@ -259,9 +305,8 @@ void ChessBoardWidget::performHumanMove(::move m) {
     if (!type) return;  // dialog cancelled: keep the selection, no move
     m.promotion = *type;
   }
-  eng_.perform_move(m);
   clearSelection();
-  afterMove();
+  playMove(m);
 }
 
 std::optional<piece_type> ChessBoardWidget::askPromotionPiece() {
@@ -306,26 +351,85 @@ std::optional<ChessBoardWidget::Square> ChessBoardWidget::squareAt(
 
 // ---------------------------------------------------------------- painting
 
-void ChessBoardWidget::loadPieceImages() {
+void ChessBoardWidget::renderPieceImages(int size) {
+  // The pieces are SVG (vector) images: they are rendered once for the
+  // current square size, so they stay sharp at every size. On a screen with
+  // scaling (e.g. 2x on a Retina display) a square of 80 points has 160
+  // pixels, so the images are rendered with that many pixels.
+  const qreal ratio = devicePixelRatioF();
+  const int pixels = qRound(size * ratio);
   const char letters[] = "kqbnrp";  // same order as enum piece_type
   for (int color = 0; color < 2; ++color) {
     for (int type = 0; type < 6; ++type) {
       // ":/" means Qt's resource system: the images are compiled into the
-      // binary (see qt_add_resources in CMakeLists.txt).
-      QString file = QString(":/images/%1_%2.png")
+      // binary (see qt_add_resources in CMakeLists.txt). Qt reads SVG with
+      // its image format plugin (package qt6-svg-plugins).
+      QString file = QString(":/images/%1_%2.svg")
                          .arg(color == 0 ? "white" : "black")
                          .arg(letters[type]);
-      QPixmap& img = pieceImages_[color * 6 + type];
-      if (!img.load(file))
-        qWarning("Cannot load piece image %s", qPrintable(file));
+      QImageReader reader(file);
+      reader.setScaledSize(QSize(pixels, pixels));
+      QImage image = reader.read();
+      if (image.isNull()) {
+        qWarning("Cannot load piece image %s: %s", qPrintable(file),
+                 qPrintable(reader.errorString()));
+      }
+      QPixmap& pixmap = pieceImages_[color * 6 + type];
+      pixmap = QPixmap::fromImage(image);
+      pixmap.setDevicePixelRatio(ratio);
     }
   }
+  renderedSize_ = size;
+  renderedRatio_ = ratio;
 }
 
 const QPixmap& ChessBoardWidget::imageFor(piece p) const {
   int color = static_cast<int>(p.get_piece_color());
   return pieceImages_[color * 6 + p.get_piece_type()];
 }
+
+// ---------------------------------------------------------------- animation
+
+void ChessBoardWidget::startAnimation(const ::move& m) {
+  // The engine has made the move already; only the picture lags behind for a
+  // moment. The piece now on the target square slides there (for a
+  // promotion that is the new piece); when castling, the rook slides too.
+  slides_.clear();
+  const board& b = eng_.get_current_board();
+  slides_.push_back({b.get_piece(m.to_x, m.to_y), Square{m.from_x, m.from_y},
+                     Square{m.to_x, m.to_y}});
+  if (m.type == CASTLING) {
+    const bool kingSide = m.to_x > m.from_x;
+    const int rookFrom = kingSide ? 7 : 0;
+    const int rookTo = kingSide ? 5 : 3;
+    slides_.push_back({b.get_piece(rookTo, m.to_y), Square{rookFrom, m.to_y},
+                       Square{rookTo, m.to_y}});
+  }
+  if (animation_ == nullptr) {
+    animation_ = new QVariantAnimation(this);
+    animation_->setStartValue(0.0);
+    animation_->setEndValue(1.0);
+    animation_->setDuration(kSlideMs);
+    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    // Every new value repaints; at the end the slides are done.
+    connect(animation_, &QVariantAnimation::valueChanged, this,
+            [this] { update(); });
+    connect(animation_, &QVariantAnimation::finished, this, [this] {
+      slides_.clear();
+      update();
+    });
+  }
+  animation_->stop();
+  animation_->start();
+}
+
+void ChessBoardWidget::stopAnimation() {
+  if (animation_ != nullptr) animation_->stop();
+  slides_.clear();
+  update();
+}
+
+// ---------------------------------------------------------------- painting
 
 void ChessBoardWidget::paintEvent(QPaintEvent*) {
   QPainter painter(this);
@@ -334,7 +438,16 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
 
   board& b = eng_.get_current_board();
   game_history gs = eng_.get_current_gamestate();
-  int s = squareSize();
+  const int s = squareSize();
+  if (s != renderedSize_ || devicePixelRatioF() != renderedRatio_) {
+    renderPieceImages(s);  // first paint, or the window was resized
+  }
+  const QRectF boardRect(boardOrigin(), QSizeF(8 * s, 8 * s));
+
+  // The board has rounded corners: everything on it is clipped to them.
+  QPainterPath rounded;
+  rounded.addRoundedRect(boardRect, kCornerRadius, kCornerRadius);
+  painter.setClipPath(rounded);
 
   // 1. Squares. a1 (0, 0) is dark.
   for (int y = 0; y < 8; ++y) {
@@ -344,36 +457,68 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
     }
   }
 
-  // 2. Highlights: last move, king in check, selected piece. The engine stores
-  //    the last move in the previous game state.
+  // 2. Highlights: last move, selected piece. The engine stores the last
+  //    move in the previous game state.
   if (gs.prev && gs.prev->performed_move.mover.is_valid()) {
     const ::move& last = gs.prev->performed_move;
     painter.fillRect(squareRect(last.from_x, last.from_y), kLastMove);
     painter.fillRect(squareRect(last.to_x, last.to_y), kLastMove);
   }
+  if (selected_) {
+    painter.fillRect(squareRect(selected_->x, selected_->y), kSelected);
+  }
+
+  // 3. King in check: a red glow under the king, strongest in the middle.
   if (gs.is_check) {
     for (int y = 0; y < 8; ++y) {
       for (int x = 0; x < 8; ++x) {
         piece p = b.get_piece(x, y);
         if (p.is_valid() && p.get_piece_type() == KING &&
             p.get_piece_color() == gs.to_move) {
-          painter.fillRect(squareRect(x, y), kCheck);
+          QRectF r = squareRect(x, y);
+          QRadialGradient glow(r.center(), s * 0.6);
+          glow.setColorAt(0.0, kCheck);
+          glow.setColorAt(1.0, Qt::transparent);
+          painter.fillRect(r, glow);
         }
       }
     }
   }
-  if (selected_)
-    painter.fillRect(squareRect(selected_->x, selected_->y), kSelected);
 
-  // 3. Pieces.
+  // 4. Coordinates, in the color of the other square kind: files along the
+  //    bottom row, ranks along the left column.
+  QFont labelFont = painter.font();
+  labelFont.setPixelSize(std::max(9, s / 6));
+  labelFont.setBold(true);
+  painter.setFont(labelFont);
+  for (int i = 0; i < 8; ++i) {
+    QRect file = squareRect(i, 0).adjusted(0, 0, -4, -2);
+    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
+    painter.drawText(file, Qt::AlignRight | Qt::AlignBottom,
+                     QString(QChar('a' + i)));
+    QRect rank = squareRect(0, i).adjusted(4, 2, 0, 0);
+    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
+    painter.drawText(rank, Qt::AlignLeft | Qt::AlignTop,
+                     QString::number(i + 1));
+  }
+
+  // 5. Pieces. A piece that is still sliding is drawn in step 7 instead.
+  auto sliding_to = [this](int x, int y) {
+    for (const Slide& slide : slides_) {
+      if (slide.to.x == x && slide.to.y == y) return true;
+    }
+    return false;
+  };
   for (int y = 0; y < 8; ++y) {
     for (int x = 0; x < 8; ++x) {
       piece p = b.get_piece(x, y);
-      if (p.is_valid()) painter.drawPixmap(squareRect(x, y), imageFor(p));
+      if (p.is_valid() && !sliding_to(x, y)) {
+        painter.drawPixmap(squareRect(x, y), imageFor(p));
+      }
     }
   }
 
-  // 4. Targets of the selected piece: a dot on empty squares, a ring around
+  // 6. Targets of the selected piece: a dot on empty squares, a ring around
   //    pieces that can be captured.
   painter.setPen(Qt::NoPen);
   painter.setBrush(kTarget);
@@ -385,23 +530,26 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
       ring.addEllipse(r.adjusted(s * 0.08, s * 0.08, -s * 0.08, -s * 0.08));
       painter.drawPath(ring);  // odd-even fill: only the ring is painted
     } else {
-      painter.drawEllipse(r.center(), s * 0.15, s * 0.15);
+      painter.drawEllipse(r.center(), s * 0.16, s * 0.16);
     }
   }
 
-  // 5. Coordinates: files along the bottom row, ranks along the left column.
-  QFont labelFont = painter.font();
-  labelFont.setPixelSize(std::max(9, s / 7));
-  labelFont.setBold(true);
-  painter.setFont(labelFont);
-  for (int i = 0; i < 8; ++i) {
-    QRect file = squareRect(i, 0).adjusted(0, 0, -3, -2);
-    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
-    painter.drawText(file, Qt::AlignRight | Qt::AlignBottom,
-                     QString(QChar('a' + i)));
-    QRect rank = squareRect(0, i).adjusted(3, 2, 0, 0);
-    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
-    painter.drawText(rank, Qt::AlignLeft | Qt::AlignTop,
-                     QString::number(i + 1));
+  // 7. Sliding pieces, on top of everything, between start and target.
+  if (!slides_.empty() && animation_ != nullptr) {
+    const qreal t = animation_->currentValue().toReal();
+    for (const Slide& slide : slides_) {
+      QPointF from = squareRect(slide.from.x, slide.from.y).topLeft();
+      QPointF to = squareRect(slide.to.x, slide.to.y).topLeft();
+      QPointF at = from + (to - from) * t;
+      const QPixmap& image = imageFor(slide.moving);
+      painter.drawPixmap(QRectF(at, QSizeF(s, s)), image, QRectF(image.rect()));
+    }
   }
+
+  // 8. A thin edge around the board.
+  painter.setClipping(false);
+  painter.setPen(QPen(kBoardEdge, 1.0));
+  painter.setBrush(Qt::NoBrush);
+  painter.drawRoundedRect(boardRect.adjusted(0.5, 0.5, -0.5, -0.5),
+                          kCornerRadius, kCornerRadius);
 }

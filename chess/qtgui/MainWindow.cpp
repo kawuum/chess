@@ -3,16 +3,27 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QFile>
+#include <QHBoxLayout>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QStatusBar>
 
 #include "ChessBoardWidget.hpp"
+#include "SidePanel.hpp"
 #include "SimulationDialog.hpp"
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), board_(new ChessBoardWidget(this)) {
   setWindowTitle("Chess");
-  setCentralWidget(board_);
+  // The board on the left, the side panel (players, moves) on the right.
+  auto* central = new QWidget(this);
+  auto* layout = new QHBoxLayout(central);
+  layout->setContentsMargins(16, 16, 16, 16);
+  layout->setSpacing(16);
+  layout->addWidget(board_, 1);
+  layout->addWidget(new SidePanel(board_, central));
+  setCentralWidget(central);
 
   // Every QAction gets the window as parent, so Qt deletes it with the window.
   QMenu* game = menuBar()->addMenu("&Game");
@@ -42,6 +53,11 @@ MainWindow::MainWindow(QWidget* parent)
 
   QMenu* options = menuBar()->addMenu("&Options");
   addAiSpeedMenu(options);
+
+  QMenu* help = menuBar()->addMenu("&Help");
+  QAction* about = help->addAction("&About Chess");
+  connect(about, &QAction::triggered, this,
+          [this] { QMessageBox::about(this, "About Chess", aboutText()); });
 
   connect(board_, &ChessBoardWidget::statusChanged, statusBar(),
           [this](const QString& text) { statusBar()->showMessage(text); });
@@ -74,6 +90,23 @@ void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
     connect(action, &QAction::triggered, board_,
             [this, color, info] { board_->setPlayer(color, info); });
   }
+}
+
+QString MainWindow::aboutText() {
+  // The license of the piece images (BSD) asks that its notice comes with
+  // the program, so the full text is shown here. It is compiled in with the
+  // images (see CMakeLists.txt).
+  QFile license(":/images/PIECES-LICENSE.txt");
+  QString notice = license.open(QIODevice::ReadOnly | QIODevice::Text)
+                       ? QString::fromUtf8(license.readAll())
+                       : QString("(license text missing)");
+  return "<h3>Chess</h3>"
+         "<p>A chess program with a Qt GUI and several AIs.<br>"
+         "github.com/kawuum/chess</p>"
+         "<p>Chess pieces by Colin M.L. Burnett (Cburnett), Wikimedia "
+         "Commons, used under the BSD license:</p><pre style=\"font-size: "
+         "small\">" +
+         notice.toHtmlEscaped() + "</pre>";
 }
 
 void MainWindow::showSimulation() {

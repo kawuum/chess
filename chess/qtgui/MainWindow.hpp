@@ -17,6 +17,9 @@ class MainWindow : public QMainWindow {
  public:
   explicit MainWindow(QWidget* parent = nullptr);
 
+  // Text of Help > About, including the license of the piece images.
+  static QString aboutText();
+
  private:
   // Adds a submenu to choose who plays one color: Human or one of the AIs.
   void addPlayerMenu(QMenu* parent, const QString& title, piece_color color);

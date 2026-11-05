@@ -57,18 +57,24 @@ if(CHESS_BUILD_QT)
     qtgui/MainWindow.hpp
     qtgui/ChessBoardWidget.cpp
     qtgui/ChessBoardWidget.hpp
+    qtgui/SidePanel.cpp
+    qtgui/SidePanel.hpp
     qtgui/SimulationDialog.cpp
-    qtgui/SimulationDialog.hpp)
+    qtgui/SimulationDialog.hpp
+    qtgui/Theme.cpp
+    qtgui/Theme.hpp)
   set_target_properties(chess_qtgui PROPERTIES AUTOMOC ON)
   target_link_libraries(chess_qtgui PUBLIC chess_engine Qt6::Widgets)
 
-  # Piece images are compiled in (Qt resource system), so chess_qt runs from
-  # anywhere. In code: ":/images/white_k.png" etc. For a static library Qt
-  # adds the resources as an object library that every user links in.
-  set(CHESS_PIECE_IMAGES "")
+  # Piece images (SVG) and their license are compiled in (Qt resource
+  # system), so chess_qt runs from anywhere. In code: ":/images/white_k.svg"
+  # etc. For a static library Qt adds the resources as an object library that
+  # every user links in. Reading SVG needs Qt's SVG image format plugin at
+  # runtime (Debian package qt6-svg-plugins), not the QtSvg development files.
+  set(CHESS_PIECE_IMAGES "qtgui/images/PIECES-LICENSE.txt")
   foreach(color white black)
     foreach(piece k q r b n p)
-      list(APPEND CHESS_PIECE_IMAGES "qtgui/images/${color}_${piece}.png")
+      list(APPEND CHESS_PIECE_IMAGES "qtgui/images/${color}_${piece}.svg")
     endforeach()
   endforeach()
   qt_add_resources(chess_qtgui "piece_images"

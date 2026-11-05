@@ -6,11 +6,13 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStatusBar>
+#include <QTableWidget>
 #include <QTest>
 #include <algorithm>
 #include <ostream>
@@ -125,12 +127,27 @@ TEST_F(Gui, OpensAsASingleWindow) {
 TEST_F(Gui, StartsWithWhiteToMove) { EXPECT_EQ(status(), "White to move"); }
 
 TEST_F(Gui, PieceImagesAreLoaded) {
-  // The pixel in the middle of e2 belongs to the pawn image, not to the
-  // square. If the embedded images were missing, it would show the square.
+  // e2 (white pawn) and e4 (empty) are squares of the same color. If the
+  // piece images are drawn, many pixels of e2 differ from e4; if they were
+  // missing (e.g. no SVG plugin), both squares would look the same.
   QImage img = board->grab().toImage();
-  QColor pawn = img.pixelColor(center(*board, 4, 1));
-  QColor empty_light = img.pixelColor(center(*board, 4, 3));  // e4
-  EXPECT_NE(pawn, empty_light);
+  const int s = std::min(board->width(), board->height()) / 8;
+  const QPoint e2 = center(*board, 4, 1) - QPoint(s / 2, s / 2);
+  const QPoint e4 = center(*board, 4, 3) - QPoint(s / 2, s / 2);
+  int differing = 0;
+  for (int dy = 0; dy < s; ++dy) {
+    for (int dx = 0; dx < s; ++dx) {
+      QPoint d(dx, dy);
+      if (img.pixel(e2 + d) != img.pixel(e4 + d)) ++differing;
+    }
+  }
+  EXPECT_GT(differing, s * s / 10);  // a pawn covers far more than 10%
+}
+
+TEST_F(Gui, AboutNamesThePieceLicense) {
+  QString text = MainWindow::aboutText();
+  EXPECT_TRUE(text.contains("Cburnett"));
+  EXPECT_TRUE(text.contains("Redistributions in binary form"));  // BSD text
 }
 
 TEST_F(Gui, ClickTwiceMovesAPiece) {
@@ -150,6 +167,64 @@ TEST_F(Gui, UndoTakesTheMoveBack) {
   click(4, 3);
   board->undoMove();
   EXPECT_EQ(status(), "White to move");
+}
+
+TEST_F(Gui, TheGameDoesNotWaitForTheAnimation) {
+  // The piece slides for a moment, but the game is already one move further.
+  click(4, 1);
+  click(4, 3);
+  EXPECT_EQ(status(), "Black to move");
+  EXPECT_EQ(board->pieceAt(4, 3).get_piece_type(), PAWN);
+  EXPECT_FALSE(board->pieceAt(4, 1).is_valid());
+}
+
+// ---------------------------------------------------------------- side panel
+
+QString cell(MainWindow& w, int row, int column) {
+  auto* table = w.findChild<QTableWidget*>("moves");
+  QTableWidgetItem* item = table ? table->item(row, column) : nullptr;
+  return item ? item->text() : QString();
+}
+
+QString label(MainWindow& w, const char* name) {
+  auto* l = w.findChild<QLabel*>(name);
+  return l ? l->text() : QString("(no label %1)").arg(name);
+}
+
+TEST_F(Gui, SidePanelListsTheMovesInNotation) {
+  click(4, 1);  // e2-e4
+  click(4, 3);
+  click(6, 7);  // g8-f6
+  click(5, 5);
+  click(6, 0);  // g1-f3
+  click(5, 2);
+  EXPECT_EQ(cell(window, 0, 0), "1.");
+  EXPECT_EQ(cell(window, 0, 1), "e4");
+  EXPECT_EQ(cell(window, 0, 2), "Nf6");
+  EXPECT_EQ(cell(window, 1, 0), "2.");
+  EXPECT_EQ(cell(window, 1, 1), "Nf3");
+  board->undoMove();  // takes Nf3 back, also in the list
+  EXPECT_EQ(cell(window, 1, 1), "");
+  EXPECT_EQ(window.findChild<QTableWidget*>("moves")->rowCount(), 1);
+}
+
+TEST_F(Gui, SidePanelShowsPlayersAndWhoIsToMove) {
+  EXPECT_EQ(label(window, "whiteName"), "White · Human");
+  EXPECT_EQ(label(window, "whiteState"), "your move");
+  find_action(player_menu("&Black"), "Naive AI")->trigger();
+  EXPECT_EQ(label(window, "blackName"), "Black · Naive AI");
+  click(4, 1);
+  click(4, 3);
+  EXPECT_EQ(label(window, "blackState"), "thinking...");
+  EXPECT_TRUE(QTest::qWaitFor(
+      [&] { return label(window, "whiteState") == "your move"; }, 2000));
+}
+
+TEST_F(Gui, SidePanelShowsTheMaterialLead) {
+  board->loadPosition("4k3/8/8/8/8/8/p7/Q3K3 w - - 0 1");  // queen vs pawn
+  EXPECT_EQ(label(window, "whiteLead"), "+8");
+  EXPECT_TRUE(window.findChild<QLabel*>("whiteLead")->isVisible());
+  EXPECT_FALSE(window.findChild<QLabel*>("blackLead")->isVisible());
 }
 
 TEST_F(Gui, PlayersMenuListsHumanAndAllAis) {
