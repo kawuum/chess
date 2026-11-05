@@ -16,6 +16,10 @@ class move_generation {
                                    std::shared_ptr<game_history> gh);
   std::vector<move> generate_all_moves(game_history* gh);
   bool is_check(board& b, move m);
+  /**
+   * True if a piece of color "by" attacks square (x, y) on board b.
+   */
+  static bool is_square_attacked(board& b, int x, int y, piece_color by);
 
  private:
   std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y,

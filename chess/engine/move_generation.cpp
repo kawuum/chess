@@ -457,6 +457,77 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
     }
   }
 }
+namespace {
+
+bool on_board(int x, int y) { return x >= 0 && x <= 7 && y >= 0 && y <= 7; }
+
+// True if square (x, y) holds a piece of the given color and one of the given
+// types.
+bool has(board& b, int x, int y, piece_color color, piece_type t1,
+         piece_type t2) {
+  piece p = b.get_piece(x, y);
+  return p.is_valid() && p.get_piece_color() == color &&
+         (p.get_piece_type() == t1 || p.get_piece_type() == t2);
+}
+
+// Walks from (x, y) in direction (dx, dy) to the first piece and reports
+// whether it is an attacker of the given color and one of the given types.
+bool attacked_along(board& b, int x, int y, int dx, int dy, piece_color by,
+                    piece_type t1, piece_type t2) {
+  for (x += dx, y += dy; on_board(x, y); x += dx, y += dy) {
+    piece p = b.get_piece(x, y);
+    if (!p.is_valid()) continue;  // empty square: keep going
+    return p.get_piece_color() == by &&
+           (p.get_piece_type() == t1 || p.get_piece_type() == t2);
+  }
+  return false;
+}
+
+}  // namespace
+
+bool move_generation::is_square_attacked(board& b, int x, int y,
+                                         piece_color by) {
+  // Look outwards from the square instead of generating all moves of the
+  // attacker: a piece attacks (x, y) exactly if (x, y) would attack that
+  // piece's square with the same move pattern.
+
+  // Knights: the 8 L-shaped jumps.
+  static const int kKnight[8][2] = {{1, 2},   {2, 1},   {2, -1}, {1, -2},
+                                    {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
+  for (const auto& d : kKnight) {
+    int nx = x + d[0], ny = y + d[1];
+    if (on_board(nx, ny) && has(b, nx, ny, by, KNIGHT, KNIGHT)) return true;
+  }
+
+  // Pawns capture diagonally forwards. A white pawn attacks upwards, so it
+  // has to stand one rank below the square; a black pawn one rank above.
+  int pawn_y = by == piece_color::WHITE ? y - 1 : y + 1;
+  for (int dx : {-1, 1}) {
+    if (on_board(x + dx, pawn_y) && has(b, x + dx, pawn_y, by, PAWN, PAWN))
+      return true;
+  }
+
+  // The enemy king on one of the 8 neighbour squares.
+  for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      if ((dx != 0 || dy != 0) && on_board(x + dx, y + dy) &&
+          has(b, x + dx, y + dy, by, KING, KING))
+        return true;
+    }
+  }
+
+  // Sliding pieces: the first piece on each line decides.
+  static const int kStraight[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+  static const int kDiagonal[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+  for (const auto& d : kStraight) {
+    if (attacked_along(b, x, y, d[0], d[1], by, ROOK, QUEEN)) return true;
+  }
+  for (const auto& d : kDiagonal) {
+    if (attacked_along(b, x, y, d[0], d[1], by, BISHOP, QUEEN)) return true;
+  }
+  return false;
+}
+
 bool move_generation::is_check(board& b, move m) {
   // Castling never arrives here as one move: kingmoves() checks the king's
   // start, transit and target square one by one as normal MOVEs. The CASTLING
@@ -504,9 +575,14 @@ bool move_generation::is_check(board& b, move m) {
       break;
   }
 
-  piece_color to_move = m.mover.get_piece_color() == piece_color::WHITE
-                            ? piece_color::BLACK
-                            : piece_color::WHITE;
-  std::vector<move> moves = generate_all_moves(new_board, to_move, true);
-  return !moves.empty();
+  // Find the own king. Its bitboard has exactly one bit set; with the bit
+  // order of bit_matrix (a1 = highest bit) the number of leading zero bits is
+  // the square index 8 * y + x.
+  uint64_t king =
+      new_board.get_bit_matrix_for_piece(piece(KING, color)).get_raw();
+  if (king == 0) return false;  // no king (only in artificial test positions)
+  int index = __builtin_clzll(king);
+  piece_color opponent =
+      color == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
+  return is_square_attacked(new_board, index % 8, index / 8, opponent);
 }
