@@ -333,6 +333,23 @@ TEST_F(Gui, SimulationNumbersMatchTheText) {
   EXPECT_NE(value("speedValue"), "-");  // games per second were measured
 }
 
+TEST_F(Gui, SimulationLabelsExplainThemselves) {
+  SimulationDialog* dialog = open_simulation("Naive AI", "Random AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  auto tip = [&](const char* name) {
+    QWidget* w = dialog->findChild<QWidget*>(name);
+    return w ? w->toolTip() : QString("(no widget %1)").arg(name);
+  };
+  EXPECT_TRUE(tip("chip0").contains("Threefold repetition"));
+  EXPECT_TRUE(tip("chip1").contains("50-move rule"));
+  EXPECT_TRUE(tip("chip2").contains("Insufficient material"));
+  EXPECT_TRUE(tip("chip3").contains("Stalemate"));
+  EXPECT_TRUE(tip("chip4").contains("500 half moves"));
+  EXPECT_TRUE(tip("chip5").contains("half move"));
+  EXPECT_FALSE(tip("drawsTile").isEmpty());
+  EXPECT_FALSE(tip("swapColors").isEmpty());
+}
+
 TEST_F(Gui, SwapColorsIsOffAndNamesTheColors) {
   SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 4);
   ASSERT_NE(dialog, nullptr);

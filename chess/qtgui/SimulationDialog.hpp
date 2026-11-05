@@ -77,7 +77,9 @@ class SimulationDialog : public QDialog {
     QLabel* value = nullptr;
   };
   // name: start of the object names (for tests), e.g. "draws".
-  QWidget* createTile(Tile& tile, const QString& name);
+  // explanation: the tooltip of the tile.
+  QWidget* createTile(Tile& tile, const QString& name,
+                      const QString& explanation);
 
   // Called in the GUI thread (queued by the simulation thread).
   void showProgress(const match_stats& stats);

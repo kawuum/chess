@@ -100,6 +100,10 @@ SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
   // shares White's advantage of the first move fairly between them.
   swapColors_ = new QCheckBox("Swap colors every game", this);
   swapColors_->setObjectName("swapColors");
+  swapColors_->setToolTip(
+      "Off: the AI under White always plays White.\n"
+      "On: the AIs swap colors after every game, which shares White's\n"
+      "advantage of the first move fairly.");
   controls->addSpacing(12);
   controls->addWidget(swapColors_);
   controls->addStretch();
@@ -120,14 +124,41 @@ SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
   bar_ = new ResultBar(this);
   auto* tiles = new QHBoxLayout;
   tiles->setSpacing(10);
-  tiles->addWidget(createTile(firstWins_, "firstWins"));
-  tiles->addWidget(createTile(draws_, "draws"));
-  tiles->addWidget(createTile(secondWins_, "secondWins"));
-  tiles->addWidget(createTile(speed_, "speed"));
+  tiles->addWidget(
+      createTile(firstWins_, "firstWins", "Games this AI won by checkmate."));
+  tiles->addWidget(
+      createTile(draws_, "draws",
+                 "Games that ended in a draw. The labels below say why."));
+  tiles->addWidget(
+      createTile(secondWins_, "secondWins", "Games this AI won by checkmate."));
+  tiles->addWidget(
+      createTile(speed_, "speed", "Games played per second so far."));
   auto* chipRow = new QHBoxLayout;
   chipRow->setSpacing(6);
-  for (QLabel*& chip : chips_) {
+  // What each label means, shown when the mouse rests on it. Same order as
+  // in showVisuals().
+  const QString explanations[] = {
+      "Threefold repetition: the same position came up for the third time\n"
+      "(same pieces on the same squares, same side to move, same castling\n"
+      "and en passant rights). The game is a draw.",
+      "50-move rule: 50 moves of each side (100 half moves) without a\n"
+      "capture and without a pawn move. The game is a draw.",
+      "Insufficient material: neither side can checkmate any more, e.g.\n"
+      "king against king, or king and one bishop or knight against king.\n"
+      "The game is a draw.",
+      "Stalemate: the side to move has no legal move but is not in check.\n"
+      "The game is a draw.",
+      QString("Unfinished: games still running after %1 half moves. They\n"
+              "are stopped and count neither as a win nor as a draw.")
+          .arg(kMaxPlies),
+      "Average length of a game in half moves. A half move is the move of\n"
+      "one side: \"1. e4 e5\" are two half moves.",
+  };
+  for (size_t i = 0; i < chips_.size(); ++i) {
+    QLabel*& chip = chips_[i];
     chip = new QLabel(this);
+    chip->setObjectName(QString("chip%1").arg(i));
+    chip->setToolTip(explanations[i]);
     chip->setStyleSheet(
         "background: palette(alternate-base); border-radius: 6px;"
         " padding: 2px 8px; color: palette(placeholder-text);");
@@ -169,8 +200,10 @@ SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
   setRunning(false);
 }
 
-QWidget* SimulationDialog::createTile(Tile& tile, const QString& name) {
+QWidget* SimulationDialog::createTile(Tile& tile, const QString& name,
+                                      const QString& explanation) {
   auto* frame = new QFrame(this);
+  frame->setToolTip(explanation);
   frame->setObjectName(name + "Tile");
   frame->setStyleSheet(QString("#%1 { background: palette(alternate-base);"
                                " border-radius: 8px; }")
