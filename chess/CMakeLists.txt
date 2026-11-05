@@ -35,6 +35,10 @@ target_include_directories(chess_engine PUBLIC datastructures)
 add_executable(chess_cli main.cpp)
 target_link_libraries(chess_cli PRIVATE chess_engine)
 
+# Speed measurement (run in a release build), see bench/chess_bench.cpp
+add_executable(chess_bench bench/chess_bench.cpp)
+target_link_libraries(chess_bench PRIVATE chess_engine)
+
 if(CHESS_BUILD_QT)
   find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
