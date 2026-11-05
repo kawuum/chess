@@ -40,7 +40,7 @@ match_stats play_match(
     const std::function<bool(const match_stats&)>& after_each_game) {
   match_stats stats;
   for (int game = 0; game < settings.games; ++game) {
-    const bool first_is_white = game % 2 == 0;
+    const bool first_is_white = !settings.swap_colors || game % 2 == 0;
     const ai_info& white = first_is_white ? first : second;
     const ai_info& black = first_is_white ? second : first;
     const uint32_t first_seed = settings.first_seed + game;

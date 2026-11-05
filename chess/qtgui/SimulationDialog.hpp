@@ -1,7 +1,9 @@
 #pragma once
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QString>
+#include <array>
 #include <atomic>
 #include <memory>
 
@@ -15,6 +17,7 @@ class QProgressBar;
 class QPushButton;
 class QSpinBox;
 class QThread;
+class ResultBar;
 
 // Plays many games between two AIs without a board and shows the results.
 //
@@ -68,8 +71,18 @@ class SimulationDialog : public QDialog {
   // field, so the user can see it and play the same games again.
   uint32_t seedFor(AiChooser& chooser);
 
+  // A small card with a caption and a big number, e.g. "Draws" / "57".
+  struct Tile {
+    QLabel* caption = nullptr;
+    QLabel* value = nullptr;
+  };
+  // name: start of the object names (for tests), e.g. "draws".
+  QWidget* createTile(Tile& tile, const QString& name);
+
   // Called in the GUI thread (queued by the simulation thread).
   void showProgress(const match_stats& stats);
+  // The bar, the numbers and the draw reasons for these results.
+  void showVisuals(const match_stats& stats);
   void showEnd(const match_stats& stats);
   void setRunning(bool running);
   QString describeStats(const match_stats& stats) const;
@@ -77,10 +90,16 @@ class SimulationDialog : public QDialog {
   AiChooser first_;
   AiChooser second_;
   QSpinBox* games_;
+  QCheckBox* swapColors_;
   QPushButton* startButton_;
   QPushButton* stopButton_;
   QProgressBar* progress_;
-  QLabel* result_;
+  QLabel* progressText_;  // "37 / 100 games"
+  ResultBar* bar_;
+  Tile firstWins_, draws_, secondWins_, speed_;
+  std::array<QLabel*, 6> chips_{};  // draw reasons, unfinished, length
+  QLabel* result_;                  // all results as text
+  QElapsedTimer clock_;             // since start, for games per second
 
   std::unique_ptr<QThread> thread_;
   // Set by the GUI thread, read by the simulation thread after each game.

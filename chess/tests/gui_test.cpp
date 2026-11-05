@@ -306,11 +306,49 @@ TEST_F(Gui, SimulationPlaysGamesInTheBackground) {
   // the simulation is still running, however fast the games are.
   EXPECT_TRUE(dialog->isRunning());
   ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
-  EXPECT_TRUE(
-      dialog->resultText().contains("10 games: Naive AI against Random AI"))
+  EXPECT_TRUE(dialog->resultText().contains(
+      "10 games: Naive AI (White) against Random AI (Black)"))
       << dialog->resultText().toStdString();
-  EXPECT_TRUE(dialog->resultText().contains("Naive AI wins:"));
+  EXPECT_TRUE(dialog->resultText().contains("Naive AI (White) wins:"));
   EXPECT_EQ(status(), "White to move");  // the board is not touched
+}
+
+TEST_F(Gui, SimulationNumbersMatchTheText) {
+  SimulationDialog* dialog = open_simulation("Naive AI", "Random AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  click_button(dialog, "start");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+  auto value = [&](const char* name) {
+    return dialog->findChild<QLabel*>(name)->text();
+  };
+  const QString text = dialog->resultText();
+  EXPECT_TRUE(
+      text.contains("Naive AI (White) wins: " + value("firstWinsValue")))
+      << text.toStdString();
+  EXPECT_TRUE(
+      text.contains("Random AI (Black) wins: " + value("secondWinsValue")))
+      << text.toStdString();
+  EXPECT_TRUE(text.contains("Draws: " + value("drawsValue")))
+      << text.toStdString();
+  EXPECT_NE(value("speedValue"), "-");  // games per second were measured
+}
+
+TEST_F(Gui, SwapColorsIsOffAndNamesTheColors) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 4);
+  ASSERT_NE(dialog, nullptr);
+  auto* swap = dialog->findChild<QCheckBox*>("swapColors");
+  EXPECT_FALSE(swap->isChecked());  // the default: each AI keeps its color
+  auto run = [&] {
+    click_button(dialog, "start");
+    EXPECT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+    return dialog->resultText();
+  };
+  EXPECT_TRUE(run().contains("Random AI (White) wins:"));
+  // When the colors swap, the color is no name: the same AI is numbered.
+  swap->setChecked(true);
+  QString text = run();
+  EXPECT_TRUE(text.contains("Random AI (1) wins:")) << text.toStdString();
+  EXPECT_FALSE(text.contains("(White)")) << text.toStdString();
 }
 
 TEST_F(Gui, SimulationCanBeStopped) {
@@ -379,7 +417,9 @@ TEST_F(Gui, RandomSeedIsShownAndRepeatsTheSimulation) {
   int seed1 = dialog->findChild<QSpinBox*>("firstSeed")->value();
   int seed2 = dialog->findChild<QSpinBox*>("secondSeed")->value();
   EXPECT_TRUE(first_run.contains(
-      QString("Seeds: first AI %1, second AI %2").arg(seed1).arg(seed2)))
+      QString("Seeds: Random AI (White) %1, Naive AI (Black) %2")
+          .arg(seed1)
+          .arg(seed2)))
       << first_run.toStdString();
   // With these seeds fixed, the same games are played again.
   dialog->findChild<QCheckBox*>("firstRandomSeed")->setChecked(false);

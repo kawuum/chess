@@ -74,6 +74,16 @@ TEST(Match, ColorsAlternateAndEachAiHasItsOwnSeed) {
                                          "second 21", "first 11",   // game 1
                                          "first 12", "second 22"})  // game 2
   );
+
+  // Without swapping, the first AI is White in every game.
+  created.clear();
+  settings.swap_colors = false;
+  play_match(first, second, settings);
+  EXPECT_EQ(
+      created, (std::vector<std::string>{"first 10", "second 20",   // game 0
+                                         "first 11", "second 21",   // game 1
+                                         "first 12", "second 22"})  // game 2
+  );
 }
 
 TEST(Match, SameSeedsRepeatTheMatch) {
