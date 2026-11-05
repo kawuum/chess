@@ -29,6 +29,7 @@ endif()
 add_library(chess_engine STATIC
   datastructures/board.cpp
   engine/engine.cpp
+  engine/evaluation.cpp
   engine/move_generation.cpp
   engine/perft.cpp
   ai/random/random_ai.cpp
@@ -85,6 +86,7 @@ if(CHESS_BUILD_TESTS)
     tests/board_test.cpp
     tests/castling_test.cpp
     tests/check_test.cpp
+    tests/evaluation_test.cpp
     tests/fen_test.cpp
     tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
