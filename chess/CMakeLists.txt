@@ -4,11 +4,11 @@ project(chess CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # für clangd und clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # for clangd and clang-tidy
 
-option(CHESS_BUILD_QT "Qt6-GUI bauen" ON)
-option(CHESS_BUILD_TESTS "Tests bauen (GoogleTest)" ON)
-set(CHESS_SANITIZE "" CACHE STRING "Sanitizer, z. B. address,undefined")
+option(CHESS_BUILD_QT "Build the Qt6 GUI" ON)
+option(CHESS_BUILD_TESTS "Build the tests (GoogleTest)" ON)
+set(CHESS_SANITIZE "" CACHE STRING "Sanitizers, e.g. address,undefined")
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -21,7 +21,7 @@ if(CHESS_SANITIZE)
   add_link_options(-fsanitize=${CHESS_SANITIZE})
 endif()
 
-# Engine ohne GUI-Abhängigkeiten
+# Engine without GUI dependencies
 add_library(chess_engine STATIC
   datastructures/board.cpp
   engine/engine.cpp
