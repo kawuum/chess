@@ -390,14 +390,23 @@ bool move_generation::is_square_attacked(board& b, int x, int y,
                         : static_cast<int>(piece_color::WHITE);
   if (kAttacks.pawn[other][s] & pieces(PAWN)) return true;
 
-  // Sliding pieces: the first piece on each line decides.
+  // Sliding pieces: the first piece on each line decides, so the rays have to
+  // be walked square by square. But that is only needed if an enemy rook or
+  // queen stands anywhere on the rank or file of s at all (bishop or queen on
+  // its diagonals). Usually none does, and all four rays can be skipped. The
+  // pre-check can never give a wrong answer: it only saves work.
   static const int kStraight[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
   static const int kDiagonal[4][2] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-  for (const auto& d : kStraight) {
-    if (attacked_along(b, x, y, d[0], d[1], by, ROOK, QUEEN)) return true;
+  const uint64_t queens = pieces(QUEEN);
+  if (kAttacks.rook_lines[s] & (pieces(ROOK) | queens)) {
+    for (const auto& d : kStraight) {
+      if (attacked_along(b, x, y, d[0], d[1], by, ROOK, QUEEN)) return true;
+    }
   }
-  for (const auto& d : kDiagonal) {
-    if (attacked_along(b, x, y, d[0], d[1], by, BISHOP, QUEEN)) return true;
+  if (kAttacks.bishop_lines[s] & (pieces(BISHOP) | queens)) {
+    for (const auto& d : kDiagonal) {
+      if (attacked_along(b, x, y, d[0], d[1], by, BISHOP, QUEEN)) return true;
+    }
   }
   return false;
 }
