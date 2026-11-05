@@ -2,15 +2,9 @@
 
 #include "bit_matrix.hpp"
 #include "piece.hpp"
-//
-// Created by kawuum on 7/17/18.
-//
 
 #ifndef CHESS_BOARD_HPP
 #define CHESS_BOARD_HPP
-
-// TODO: Implement all methods + fix comments accordingly
-// TODO: Implement move / copy constructors carefully :-)
 
 /**
  * This class implements a chess board.

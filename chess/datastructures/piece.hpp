@@ -1,7 +1,3 @@
-//
-// Created by kawuum on 7/12/18.
-//
-
 #ifndef PIECE_HPP
 #define PIECE_HPP
 

@@ -18,7 +18,6 @@ class move_generation {
   bool is_check(board& b, move m);
 
  private:
-  int counter;
   std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y,
                                    board& b, bool check_for_check = false);
   std::vector<move> generate_all_moves(board& b, piece_color to_move,

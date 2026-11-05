@@ -23,7 +23,6 @@ endif()
 
 # Engine ohne GUI-Abhängigkeiten
 add_library(chess_engine STATIC
-  datastructures/bit_matrix.cpp
   datastructures/board.cpp
   engine/engine.cpp
   engine/move_generation.cpp

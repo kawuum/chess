@@ -1,35 +1,26 @@
 #include "move_generation.hpp"
 
+#include <cassert>
+
 #include "../datastructures/enums.hpp"
-#include "assert.h"
 
 std::vector<move> move_generation::generate_all_moves(game_history* gh) {
-  counter = 0;
   this->gamestate = *gh;
   std::vector<move> res =
       generate_all_moves(gh->curr_board, gh->to_move, false);
+  // A "null move" of the king: is_check() then just tells whether the side to
+  // move is in check right now.
+  move null_move = {piece(KING, gh->to_move), 0, 0, 0, 0, NO_MOVE};
+  gh->is_check = is_check(gh->curr_board, null_move);
+  // No legal moves means the game is over: checkmate if in check, otherwise
+  // stalemate.
   if (res.empty()) {
-    // TODO: seems like the game is over, we probably should do something... but
-    // we also probably should have detected this before... somewhat of a hack
-    // to check if current position is check... should we maybe even save that
-    // in game_history? would make a lot of things easier...
-    move m = {piece(KING, this->gamestate.to_move), 0, 0, 0, 0, NO_MOVE};
-    if (is_check(this->gamestate.curr_board, m)) {
-      // current position is check, no possible moves for color in check, so it
-      // seems to be mate
-      gh->result =
-          this->gamestate.to_move == piece_color::WHITE ? BLACK_WIN : WHITE_WIN;
+    if (gh->is_check) {
+      gh->result = gh->to_move == piece_color::WHITE ? BLACK_WIN : WHITE_WIN;
     } else {
-      // no possible moves, but position does not appear to be check, so it
-      // looks like stalemate
       gh->result = DRAW;
     }
   }
-  gh->is_check = is_check(
-      this->gamestate.curr_board,
-      (move){piece(KING, this->gamestate.to_move), 0, 0, 0, 0, NO_MOVE});
-  // std::cout << "generate_moves call counter: " << (int)counter << " times for
-  // " << (int)res.size() << " generated moves" << std::endl;
   return res;
 }
 
@@ -71,7 +62,6 @@ std::vector<move> move_generation::generate_moves(
 std::vector<move> move_generation::generate_moves(piece mover, uint8_t from_x,
                                                   uint8_t from_y, board& b,
                                                   bool check_for_check) {
-  ++counter;
   assert(mover.is_valid());
   switch (mover.get_piece_type()) {
     case KNIGHT: {
@@ -468,7 +458,9 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
   }
 }
 bool move_generation::is_check(board& b, move m) {
-  // TODO: should we just ignore castling for check checks?
+  // Castling never arrives here as one move: kingmoves() checks the king's
+  // start, transit and target square one by one as normal MOVEs. The CASTLING
+  // case below only keeps the function complete.
 
   board new_board = b;
   piece_color color = m.mover.get_piece_color();

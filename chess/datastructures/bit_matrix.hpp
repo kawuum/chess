@@ -1,7 +1,3 @@
-//
-// Created by kawuum on 7/12/18.
-//
-
 #ifndef CHESS_BIT_MATRIX_HPP
 #define CHESS_BIT_MATRIX_HPP
 
