@@ -39,6 +39,10 @@ target_link_libraries(chess_cli PRIVATE chess_engine)
 add_executable(chess_bench bench/chess_bench.cpp)
 target_link_libraries(chess_bench PRIVATE chess_engine)
 
+# Memory measurement (exact heap numbers), see bench/chess_mem.cpp
+add_executable(chess_mem bench/chess_mem.cpp)
+target_link_libraries(chess_mem PRIVATE chess_engine)
+
 if(CHESS_BUILD_QT)
   find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
@@ -78,6 +82,7 @@ if(CHESS_BUILD_TESTS)
   add_executable(chess_tests
     tests/castling_test.cpp
     tests/fen_test.cpp
+    tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
     tests/perft_test.cpp
     tests/random_ai_test.cpp)
