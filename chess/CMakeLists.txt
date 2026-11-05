@@ -77,6 +77,7 @@ if(CHESS_BUILD_TESTS)
   include(GoogleTest)
   add_executable(chess_tests
     tests/bit_matrix_test.cpp
+    tests/board_test.cpp
     tests/castling_test.cpp
     tests/check_test.cpp
     tests/fen_test.cpp

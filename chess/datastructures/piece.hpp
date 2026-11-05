@@ -6,21 +6,22 @@
 class piece {
  public:
   // An invalid piece ("no piece"), e.g. for an empty square.
-  piece() = default;
+  constexpr piece() = default;
 
-  piece(piece_type p_in, piece_color c_in) : valid(true), p(p_in), c(c_in) {}
+  constexpr piece(piece_type p_in, piece_color c_in)
+      : valid(true), p(p_in), c(c_in) {}
 
-  piece_type get_piece_type() const { return p; }
+  constexpr piece_type get_piece_type() const { return p; }
 
   void set_piece_type(piece_type p_in) { p = p_in; }
 
-  piece_color get_piece_color() const { return c; }
+  constexpr piece_color get_piece_color() const { return c; }
 
   void set_piece_color(piece_color c_in) { c = c_in; }
 
-  bool is_white() const { return (c == piece_color::WHITE); }
+  constexpr bool is_white() const { return (c == piece_color::WHITE); }
 
-  bool is_valid() const { return valid; }
+  constexpr bool is_valid() const { return valid; }
 
  private:
   // Type and color of an invalid piece have no meaning, but they get fixed

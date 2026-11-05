@@ -23,6 +23,14 @@
  * additional steps to detect an error). If you want to check the sanity of the
  * data structure, you can use the check_sanity method which should throw
  * appropriate errors.
+ *
+ * The board is stored twice, and both copies are always kept in sync:
+ * - 12 bitboards, one per piece type and color (for set operations on whole
+ *   boards, e.g. finding the king or all pieces of a color),
+ * - squares: one byte per square with a piece code (0 = empty), so that
+ *   get_piece() is a single memory access instead of up to 12 bitboard tests.
+ * Only the methods of this class change the board, so they can keep both in
+ * sync; that is why the bitboards are handed out read-only.
  */
 
 class board {
@@ -104,11 +112,14 @@ class board {
   void add_piece(piece p, uint8_t x, uint8_t y);
 
   /**
-   * Gets the piece at the specified position.
+   * Gets the piece at the specified position (an invalid piece if the square
+   * is empty). Inline because it is the most called function of the engine.
    * @param x
    * @param y
    */
-  piece get_piece(uint8_t x, uint8_t y);
+  piece get_piece(uint8_t x, uint8_t y) const {
+    return kDecode[squares[8 * y + x]];
+  }
 
   /**
    * Removes all pieces from the board.
@@ -126,18 +137,19 @@ class board {
   bool check_sanity();
 
   /**
-   * Allows for low-level access of the bit_matrices.
-   * @param p The pieces, the bit_matrix should be returned for.
+   * Read-only access to the bitboard of a piece type and color.
+   * @param p The piece the bit_matrix should be returned for.
    * @return Reference to the respective bit_matrix.
+   * @throws std::invalid_argument for an invalid piece
    */
-  bit_matrix& get_bit_matrix_for_piece(piece p);
+  const bit_matrix& get_bit_matrix_for_piece(piece p) const;
 
   /**
    * Assembles the bit_matrices for the respective colors.
    * @param c The color the bit_matrix should be returned for.
    * @return The respective bit_matrix.
    */
-  bit_matrix get_bit_matrix_for_color(piece_color c);
+  bit_matrix get_bit_matrix_for_color(piece_color c) const;
 
   /**
    * Returns true if no piece is stored on this board, false otherwise.
@@ -173,7 +185,7 @@ class board {
    */
   uint8_t get_num_pieces(piece p);
 
-  bool operator==(board& rhs) {
+  bool operator==(const board& rhs) const {
     return (white_king == rhs.white_king && white_queens == rhs.white_queens &&
             white_bishops == rhs.white_bishops &&
             white_knights == rhs.white_knights &&
@@ -185,7 +197,31 @@ class board {
   };
 
  private:
-  bit_matrix* find_piece(uint8_t from_x, uint8_t from_y);
+  // Writable bitboard of a piece: only for the methods of this class, which
+  // also update squares.
+  bit_matrix& bitboard_for(piece p);
+
+  // Piece codes in squares: 0 = empty, 1..12 = 1 + 6 * color + piece_type.
+  static constexpr uint8_t code_of(piece p) {
+    return static_cast<uint8_t>(1 + 6 * static_cast<int>(p.get_piece_color()) +
+                                p.get_piece_type());
+  }
+  static constexpr piece kDecode[13] = {piece(),
+                                        piece(KING, piece_color::WHITE),
+                                        piece(QUEEN, piece_color::WHITE),
+                                        piece(BISHOP, piece_color::WHITE),
+                                        piece(KNIGHT, piece_color::WHITE),
+                                        piece(ROOK, piece_color::WHITE),
+                                        piece(PAWN, piece_color::WHITE),
+                                        piece(KING, piece_color::BLACK),
+                                        piece(QUEEN, piece_color::BLACK),
+                                        piece(BISHOP, piece_color::BLACK),
+                                        piece(KNIGHT, piece_color::BLACK),
+                                        piece(ROOK, piece_color::BLACK),
+                                        piece(PAWN, piece_color::BLACK)};
+
+  // One byte per square, index 8 * y + x (see code_of).
+  uint8_t squares[64] = {};
 
   // White pieces
   bit_matrix white_king;

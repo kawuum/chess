@@ -14,7 +14,8 @@ TEST(MemoryLayout, BitMatrix) {
 }
 
 TEST(MemoryLayout, Board) {
-  EXPECT_EQ(sizeof(board), 96u);  // 12 bitboards
+  // 12 bitboards (96 bytes) + 64 bytes squares array (since 2.3).
+  EXPECT_EQ(sizeof(board), 160u);
 }
 
 TEST(MemoryLayout, Piece) {
@@ -27,7 +28,8 @@ TEST(MemoryLayout, Move) {
 }
 
 TEST(MemoryLayout, GameHistory) {
-  EXPECT_EQ(sizeof(game_history), 168u);  // one per played move
+  // One per played move; contains a board (+64 bytes since 2.3).
+  EXPECT_EQ(sizeof(game_history), 232u);
 }
 
 TEST(MemoryLayout, Engine) {
