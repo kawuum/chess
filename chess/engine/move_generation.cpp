@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "../datastructures/enums.hpp"
+#include "attack_tables.hpp"
 
 std::vector<move> move_generation::generate_all_moves(game_history* gh) {
   this->gamestate = *gh;
@@ -350,15 +351,6 @@ namespace {
 
 bool on_board(int x, int y) { return x >= 0 && x <= 7 && y >= 0 && y <= 7; }
 
-// True if square (x, y) holds a piece of the given color and one of the given
-// types.
-bool has(board& b, int x, int y, piece_color color, piece_type t1,
-         piece_type t2) {
-  piece p = b.get_piece(x, y);
-  return p.is_valid() && p.get_piece_color() == color &&
-         (p.get_piece_type() == t1 || p.get_piece_type() == t2);
-}
-
 // Walks from (x, y) in direction (dx, dy) to the first piece and reports
 // whether it is an attacker of the given color and one of the given types.
 bool attacked_along(board& b, int x, int y, int dx, int dy, piece_color by,
@@ -380,30 +372,23 @@ bool move_generation::is_square_attacked(board& b, int x, int y,
   // attacker: a piece attacks (x, y) exactly if (x, y) would attack that
   // piece's square with the same move pattern.
 
-  // Knights: the 8 L-shaped jumps.
-  static const int kKnight[8][2] = {{1, 2},   {2, 1},   {2, -1}, {1, -2},
-                                    {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
-  for (const auto& d : kKnight) {
-    int nx = x + d[0], ny = y + d[1];
-    if (on_board(nx, ny) && has(b, nx, ny, by, KNIGHT, KNIGHT)) return true;
-  }
-
-  // Pawns capture diagonally forwards. A white pawn attacks upwards, so it
-  // has to stand one rank below the square; a black pawn one rank above.
-  int pawn_y = by == piece_color::WHITE ? y - 1 : y + 1;
-  for (int dx : {-1, 1}) {
-    if (on_board(x + dx, pawn_y) && has(b, x + dx, pawn_y, by, PAWN, PAWN))
-      return true;
-  }
-
-  // The enemy king on one of the 8 neighbour squares.
-  for (int dx = -1; dx <= 1; ++dx) {
-    for (int dy = -1; dy <= 1; ++dy) {
-      if ((dx != 0 || dy != 0) && on_board(x + dx, y + dy) &&
-          has(b, x + dx, y + dy, by, KING, KING))
-        return true;
-    }
-  }
+  // Knights, kings and pawns cannot be blocked, so a precomputed table says
+  // which squares attack (x, y). The question is turned around: a knight on t
+  // attacks s exactly if a knight on s would attack t. One AND with the
+  // attacker's bitboard checks all candidate squares at once.
+  const int s = 8 * y + x;
+  auto pieces = [&b, by](piece_type t) {
+    return b.get_bit_matrix_for_piece(piece(t, by)).get_raw();
+  };
+  if (kAttacks.knight[s] & pieces(KNIGHT)) return true;
+  if (kAttacks.king[s] & pieces(KING)) return true;
+  // Pawns are the exception to the symmetry: they capture in one direction
+  // only. A black pawn attacks s exactly from the squares a white pawn on s
+  // would attack, so the table of the other color is used.
+  const int other = by == piece_color::WHITE
+                        ? static_cast<int>(piece_color::BLACK)
+                        : static_cast<int>(piece_color::WHITE);
+  if (kAttacks.pawn[other][s] & pieces(PAWN)) return true;
 
   // Sliding pieces: the first piece on each line decides.
   static const int kStraight[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
