@@ -33,6 +33,7 @@ add_library(chess_engine STATIC
   engine/move_generation.cpp
   engine/perft.cpp
   ai/random/random_ai.cpp
+  ai/naive/naive_ai.cpp
   ai/ai_registry.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
 
@@ -90,6 +91,7 @@ if(CHESS_BUILD_TESTS)
     tests/fen_test.cpp
     tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
+    tests/naive_ai_test.cpp
     tests/perft_test.cpp
     tests/random_ai_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
