@@ -16,6 +16,10 @@ if(CCACHE_PROGRAM)
 endif()
 
 add_compile_options(-Wall -Wextra)
+# Let the compiler use the POPCNT instruction for __builtin_popcountll
+# (bit_matrix::get_num_bits_set); without it, counting bits is a call to a
+# software routine. Every x86-64 CPU since about 2008 has POPCNT.
+add_compile_options(-mpopcnt)
 if(CHESS_SANITIZE)
   add_compile_options(-fsanitize=${CHESS_SANITIZE} -fno-omit-frame-pointer)
   add_link_options(-fsanitize=${CHESS_SANITIZE})
