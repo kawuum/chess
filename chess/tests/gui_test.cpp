@@ -124,6 +124,37 @@ TEST_F(Gui, AiChosenInMenuAnswersAMove) {
       QTest::qWaitFor([&] { return status() == "White to move"; }, 2000));
 }
 
+// White pawn on a7, one step before promotion.
+const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K3 w - - 0 1";
+
+TEST_F(Gui, PromotionPlaysTheChosenPiece) {
+  // Instead of the dialog, a function chooses the knight.
+  int asked = 0;
+  board->setPromotionChooser([&asked]() -> std::optional<piece_type> {
+    ++asked;
+    return KNIGHT;
+  });
+  board->loadPosition(kPromotionFen);
+  click(0, 6);  // a7
+  click(0, 7);  // a8
+  EXPECT_EQ(asked, 1);
+  piece p = board->pieceAt(0, 7);
+  ASSERT_TRUE(p.is_valid());
+  EXPECT_EQ(p.get_piece_type(), KNIGHT);
+  EXPECT_EQ(p.get_piece_color(), piece_color::WHITE);
+  EXPECT_EQ(status(), "Black to move");
+}
+
+TEST_F(Gui, CancelledPromotionKeepsThePosition) {
+  board->setPromotionChooser([] { return std::optional<piece_type>(); });
+  board->loadPosition(kPromotionFen);
+  click(0, 6);
+  click(0, 7);
+  EXPECT_EQ(board->pieceAt(0, 6).get_piece_type(), PAWN);  // still on a7
+  EXPECT_FALSE(board->pieceAt(0, 7).is_valid());           // a8 empty
+  EXPECT_EQ(status(), "White to move");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {

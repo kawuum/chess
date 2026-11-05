@@ -4,8 +4,10 @@
 #include <QPixmap>
 #include <QWidget>
 #include <array>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "../ai/ai_registry.hpp"
@@ -23,6 +25,11 @@ class ChessBoardWidget : public QWidget {
   explicit ChessBoardWidget(QWidget* parent = nullptr);
 
   void newGame();
+  // Starts a game from the given position (FEN). Throws std::invalid_argument
+  // for an invalid FEN; the current game is unchanged then.
+  void loadPosition(const std::string& fen);
+  // The piece on square (x, y), an invalid piece if the square is empty.
+  piece pieceAt(int x, int y);
   // Takes back the last move. Against an AI it takes back the AI's answer
   // too, so the human is to move again.
   void undoMove();
@@ -31,6 +38,12 @@ class ChessBoardWidget : public QWidget {
   void setPlayer(piece_color color, const ai_info* ai);
   // Whose turn it is, check, or how the game ended.
   QString statusText();
+
+  // How the promotion piece of a human move is chosen. Normally a dialog asks
+  // the user; an empty result cancels the move. Tests set a function instead,
+  // because a dialog cannot be clicked without a screen.
+  using PromotionChooser = std::function<std::optional<piece_type>()>;
+  void setPromotionChooser(PromotionChooser chooser);
 
  signals:
   // Short text for the status bar, e.g. "White to move".
@@ -79,6 +92,7 @@ class ChessBoardWidget : public QWidget {
   std::vector<::move> targets_;  // legal moves of the selected piece
   bool aiMovePending_ = false;
   bool gameOverShown_ = false;
+  PromotionChooser promotionChooser_;  // empty: use the dialog
 };
 
 #endif  // CHESS_CHESSBOARDWIDGET_HPP

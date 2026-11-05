@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QTimer>
 #include <algorithm>
+#include <utility>
 
 namespace {
 
@@ -41,6 +42,21 @@ void ChessBoardWidget::newGame() {
   gameOverShown_ = false;
   clearSelection();
   afterMove();
+}
+
+void ChessBoardWidget::loadPosition(const std::string& fen) {
+  eng_.new_game(fen);
+  gameOverShown_ = false;
+  clearSelection();
+  afterMove();
+}
+
+piece ChessBoardWidget::pieceAt(int x, int y) {
+  return eng_.get_current_board().get_piece(x, y);
+}
+
+void ChessBoardWidget::setPromotionChooser(PromotionChooser chooser) {
+  promotionChooser_ = std::move(chooser);
 }
 
 void ChessBoardWidget::undoMove() {
@@ -185,6 +201,7 @@ void ChessBoardWidget::performHumanMove(::move m) {
 }
 
 std::optional<piece_type> ChessBoardWidget::askPromotionPiece() {
+  if (promotionChooser_) return promotionChooser_();
   const QStringList names = {"Queen", "Rook", "Bishop", "Knight"};
   const piece_type types[] = {QUEEN, ROOK, BISHOP, KNIGHT};
   bool ok = false;
