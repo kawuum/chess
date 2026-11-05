@@ -181,6 +181,22 @@ TEST_F(Gui, AiVsAiWithDelayPlaysByItself) {
   EXPECT_FALSE(status().contains("click"));
 }
 
+TEST_F(Gui, NaiveAiTakesAHangingQueen) {
+  // After 1.e4 d5 the human plays 2.Qg4??; the naive AI (Black) must answer
+  // with Bc8xg4.
+  find_action(player_menu("&Black"), "Naive AI")->trigger();
+  board->loadPosition(
+      "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+  click(3, 0);  // d1
+  click(6, 3);  // g4
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] { return status().startsWith("White to move"); }, 2000));
+  piece p = board->pieceAt(6, 3);  // g4
+  ASSERT_TRUE(p.is_valid());
+  EXPECT_EQ(p.get_piece_type(), BISHOP);
+  EXPECT_EQ(p.get_piece_color(), piece_color::BLACK);
+}
+
 // White pawn on a7, one step before promotion.
 const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K3 w - - 0 1";
 
