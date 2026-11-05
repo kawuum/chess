@@ -1,8 +1,8 @@
 # chess_bench baseline, 2026-11-05, Intel(R) Core(TM) i7-3615QM CPU @ 2.30GHz
 # name depth nodes best_seconds
-start 4 197281 0.041632
-kiwipete 3 97862 0.016615
-position3 5 674624 0.136658
-position4 4 422333 0.075484
-position5 3 62379 0.010853
-position6 3 89890 0.014345
+start 4 197281 0.036478
+kiwipete 3 97862 0.015643
+position3 5 674624 0.130640
+position4 4 422333 0.070316
+position5 3 62379 0.010308
+position6 3 89890 0.013255

@@ -12,8 +12,11 @@
 
 class move_generation {
  public:
-  std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y,
-                                   std::shared_ptr<game_history> gh);
+  /**
+   * All legal moves of the side to move in the given position. Also sets
+   * gh->is_check and, if there are no legal moves, gh->result (checkmate or
+   * stalemate).
+   */
   std::vector<move> generate_all_moves(game_history* gh);
   bool is_check(board& b, move m);
   /**
@@ -22,28 +25,29 @@ class move_generation {
   static bool is_square_attacked(board& b, int x, int y, piece_color by);
 
  private:
-  std::vector<move> generate_moves(piece mover, uint8_t from_x, uint8_t from_y,
-                                   board& b, bool check_for_check = false);
-  std::vector<move> generate_all_moves(board& b, piece_color to_move,
-                                       bool check_for_check = false);
+  // All of these append the legal moves they find to "moves".
+  void generate_all_moves(board& b, piece_color to_move,
+                          std::vector<move>& moves);
+  void generate_moves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
+                      std::vector<move>& moves);
   void bishopmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                   std::vector<move>& moves, bool check_for_check = false);
+                   std::vector<move>& moves);
   void rookmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                 std::vector<move>& moves, bool check_for_check = false);
+                 std::vector<move>& moves);
   void pawnmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                 std::vector<move>& moves, bool check_for_check = false);
+                 std::vector<move>& moves);
   void knightmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                   std::vector<move>& moves, bool check_for_check = false);
+                   std::vector<move>& moves);
   void kingmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                 std::vector<move>& moves, bool check_for_check = false);
+                 std::vector<move>& moves);
   void queenmoves(piece mover, uint8_t from_x, uint8_t from_y, board& b,
-                  std::vector<move>& moves, bool check_for_check = false);
+                  std::vector<move>& moves);
   void bishopmoves_helper(piece& mover, board& b, bool* stopped, uint8_t from_x,
                           uint8_t from_y, int8_t x_diff, int8_t y_diff,
-                          std::vector<move>& moves, bool check_for_check);
+                          std::vector<move>& moves);
   void rookmoves_helper(piece& mover, board& b, bool* stopped, uint8_t from_x,
                         uint8_t from_y, int8_t x_diff, int8_t y_diff,
-                        std::vector<move>& moves, bool check_for_check);
+                        std::vector<move>& moves);
   game_history gamestate;
 };
 
