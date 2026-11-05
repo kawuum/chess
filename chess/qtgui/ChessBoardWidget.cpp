@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QTimer>
 #include <algorithm>
+#include <random>
 #include <utility>
 
 namespace {
@@ -103,7 +104,9 @@ void ChessBoardWidget::undoMove() {
 void ChessBoardWidget::setPlayer(piece_color color, const ai_info* ai) {
   int index = static_cast<int>(color);
   // Assigning a new unique_ptr deletes the previous AI automatically.
-  ai_[index] = ai ? ai->create(&eng_) : nullptr;
+  // A new random seed every time: a game in the GUI should not be the same
+  // as the last one.
+  ai_[index] = ai ? ai->create(&eng_, std::random_device{}()) : nullptr;
   clearSelection();
   afterMove();
 }

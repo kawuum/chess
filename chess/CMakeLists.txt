@@ -83,6 +83,7 @@ if(CHESS_BUILD_TESTS)
   find_package(GTest REQUIRED)
   include(GoogleTest)
   add_executable(chess_tests
+    tests/ai_registry_test.cpp
     tests/attack_tables_test.cpp
     tests/bit_matrix_test.cpp
     tests/board_test.cpp

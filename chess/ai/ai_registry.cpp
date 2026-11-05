@@ -6,8 +6,14 @@
 const std::vector<ai_info>& available_ais() {
   // Built once on first use (thread-safe since C++11).
   static const std::vector<ai_info> ais = {
-      {"Random AI", [](engine* e) { return std::make_unique<random_ai>(e); }},
-      {"Naive AI", [](engine* e) { return std::make_unique<naive_ai>(e); }},
+      {"Random AI",
+       [](engine* e, uint32_t seed) {
+         return std::make_unique<random_ai>(e, "Random AI", seed);
+       }},
+      {"Naive AI",
+       [](engine* e, uint32_t seed) {
+         return std::make_unique<naive_ai>(e, "Naive AI", seed);
+       }},
   };
   return ais;
 }
