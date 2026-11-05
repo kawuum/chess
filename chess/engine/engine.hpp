@@ -22,23 +22,14 @@ class engine {
    */
   void new_game(std::string fen);
   /**
-   * Performs a move. Only the start and target square of m are used; the
-   * engine looks the move up in its list of legal moves.
-   * @param m The move to be performed
-   * @throws std::invalid_argument if the move is not legal or is a promotion
-   * (use the overload with a piece). The position is unchanged then.
+   * Performs a move. Only the start and target square of m (and for
+   * promotions the promotion piece) are used; the engine looks the move up in
+   * its list of legal moves.
+   * @param m The move to be performed, e.g. one from get_legal_moves()
+   * @throws std::invalid_argument if the move is not legal, for example a
+   * promotion to a king or pawn. The position is unchanged then.
    */
-  void perform_move(move& m);
-  /**
-   * Performs a promotion move.
-   * @param m The move to be performed
-   * @param p The piece the pawn promotes to: queen, rook, bishop or knight of
-   * the moving side
-   * @throws std::invalid_argument if the move is not legal, is not a
-   * promotion, or p is not a valid promotion piece. The position is unchanged
-   * then.
-   */
-  void perform_move(move& m, piece& p);
+  void perform_move(const move& m);
   /**
    * Reverses the last move.
    */
@@ -78,7 +69,8 @@ class engine {
   /** Fills legal_moves for the current position if it is empty. */
   void ensure_legal_moves();
   /**
-   * Looks up m (by start and target square) in the legal moves.
+   * Looks up m (by start and target square, for promotions also by the
+   * promotion piece) in the legal moves.
    * @returns The engine's own copy of the move
    * @throws std::invalid_argument if there is no such legal move
    */
@@ -86,10 +78,8 @@ class engine {
   /**
    * Plays a legal move and creates the next game state.
    * @param m A move from the legal move list
-   * @param promotion The promotion piece; must be invalid (piece()) for moves
-   * that are not promotions
    */
-  void apply_move(move m, piece promotion);
+  void apply_move(move m);
   std::shared_ptr<game_history> gh;
   // Legal moves of the current position (cache, see ensure_legal_moves()).
   std::vector<move> legal_moves;

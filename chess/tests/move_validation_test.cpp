@@ -1,5 +1,6 @@
 // engine::perform_move() only accepts legal moves. Anything else throws
 // std::invalid_argument and leaves the position unchanged.
+#include <algorithm>
 #include <stdexcept>
 
 #include "test_helpers.hpp"
@@ -73,16 +74,30 @@ TEST(MoveValidation, UsesTheEnginesMoveData) {
 
 const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K3 w - - 0 1";
 
-move promotion_move(engine& e) {
-  std::vector<move> moves = e.get_legal_moves(0, 6);  // pawn on a7
-  EXPECT_EQ(moves.size(), 1u);
-  return moves.at(0);
+// A promotion move of the pawn on a7, built by hand: the target square a8 is
+// right, the promotion piece is whatever the test sets.
+move promotion_move(piece_type promotion) {
+  move m = make_move(kWhitePawn, 0, 6, 0, 7, PROMOTION);
+  m.promotion = promotion;
+  return m;
+}
+
+TEST(MoveValidation, FourMovesPerPromotion) {
+  // Every promotion piece is its own legal move.
+  engine e;
+  e.new_game(kPromotionFen);
+  std::vector<std::string> moves;
+  for (const move& m : e.get_legal_moves(0, 6)) moves.push_back(to_uci(m));
+  std::sort(moves.begin(), moves.end());
+  EXPECT_EQ(moves,
+            (std::vector<std::string>{"a7a8b", "a7a8n", "a7a8q", "a7a8r"}));
 }
 
 TEST(MoveValidation, PromotionWithoutPieceThrows) {
+  // move::promotion defaults to KING, which means "none".
   engine e;
   e.new_game(kPromotionFen);
-  move m = promotion_move(e);
+  move m = make_move(kWhitePawn, 0, 6, 0, 7, PROMOTION);
   EXPECT_THROW(e.perform_move(m), std::invalid_argument);
   EXPECT_EQ(e.get_current_board().get_piece(0, 6).get_piece_type(), PAWN);
 }
@@ -90,35 +105,25 @@ TEST(MoveValidation, PromotionWithoutPieceThrows) {
 TEST(MoveValidation, PromotionToKingOrPawnThrows) {
   engine e;
   e.new_game(kPromotionFen);
-  move m = promotion_move(e);
-  piece king(KING, piece_color::WHITE), pawn(PAWN, piece_color::WHITE);
-  EXPECT_THROW(e.perform_move(m, king), std::invalid_argument);
-  EXPECT_THROW(e.perform_move(m, pawn), std::invalid_argument);
+  EXPECT_THROW(e.perform_move(promotion_move(KING)), std::invalid_argument);
+  EXPECT_THROW(e.perform_move(promotion_move(PAWN)), std::invalid_argument);
+  EXPECT_EQ(e.get_current_board().get_piece(0, 6).get_piece_type(), PAWN);
 }
 
-TEST(MoveValidation, PromotionToOpponentColorThrows) {
-  engine e;
-  e.new_game(kPromotionFen);
-  move m = promotion_move(e);
-  piece black_queen(QUEEN, piece_color::BLACK);
-  EXPECT_THROW(e.perform_move(m, black_queen), std::invalid_argument);
-}
-
-TEST(MoveValidation, PromotionPieceForNormalMoveThrows) {
+TEST(MoveValidation, PromotionFieldIsIgnoredForNormalMoves) {
+  // The promotion piece only means something for promotions.
   engine e;
   e.new_game();
   move m = make_move(kWhitePawn, 4, 1, 4, 3, MOVE);
-  piece queen(QUEEN, piece_color::WHITE);
-  EXPECT_THROW(e.perform_move(m, queen), std::invalid_argument);
-  expect_start_position(e);
+  m.promotion = QUEEN;
+  e.perform_move(m);
+  EXPECT_EQ(e.get_current_board().get_piece(4, 3).get_piece_type(), PAWN);
 }
 
 TEST(MoveValidation, UnderpromotionToKnight) {
   engine e;
   e.new_game(kPromotionFen);
-  move m = promotion_move(e);
-  piece knight(KNIGHT, piece_color::WHITE);
-  e.perform_move(m, knight);
+  e.perform_move(promotion_move(KNIGHT));
   piece p = e.get_current_board().get_piece(0, 7);  // a8
   ASSERT_TRUE(p.is_valid());
   EXPECT_EQ(p.get_piece_type(), KNIGHT);

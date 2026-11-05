@@ -24,8 +24,9 @@ TEST(MemoryLayout, Piece) {
 }
 
 TEST(MemoryLayout, Move) {
-  // piece + 4 coordinates + 1-byte move_type (20 bytes before 2.4).
-  EXPECT_EQ(sizeof(move), 8u);
+  // piece + 4 coordinates + 1-byte move_type + 1-byte promotion piece
+  // (20 bytes before 2.4, 8 before the promotion piece became part of it).
+  EXPECT_EQ(sizeof(move), 9u);
 }
 
 TEST(MemoryLayout, GameHistory) {

@@ -95,8 +95,8 @@ TEST(PerftHelpers, PerftLeavesThePositionUnchanged) {
 TEST(PerftHelpers, UciNotation) {
   move m{piece(PAWN, piece_color::WHITE), 4, 1, 4, 3, MOVE};
   EXPECT_EQ(to_uci(m), "e2e4");
-  move promo{piece(PAWN, piece_color::WHITE), 0, 6, 0, 7, PROMOTION};
-  EXPECT_EQ(to_uci(promo, KNIGHT), "a7a8n");
+  move promo{piece(PAWN, piece_color::WHITE), 0, 6, 0, 7, PROMOTION, KNIGHT};
+  EXPECT_EQ(to_uci(promo), "a7a8n");
 }
 
 }  // namespace

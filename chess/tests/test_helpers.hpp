@@ -23,17 +23,13 @@ inline bool has_move(engine& e, const std::string& uci) {
   return false;
 }
 
-// Plays a move given in UCI notation. Fails the test if it is not legal.
+// Plays a move given in UCI notation, e.g. "e2e4" or "a7a8n" for a
+// promotion to a knight. Fails the test if it is not legal.
 inline void play(engine& e, const std::string& uci) {
   game_history gs = e.get_current_gamestate();
-  for (move m : e.get_all_legal_moves(&gs)) {
-    if (to_uci(m) == uci.substr(0, 4) || to_uci(m) == uci) {
-      if (m.type == PROMOTION || m.type == CAPTURING_PROMOTION) {
-        piece q(QUEEN, e.get_color_to_move());
-        e.perform_move(m, q);
-      } else {
-        e.perform_move(m);
-      }
+  for (const move& m : e.get_all_legal_moves(&gs)) {
+    if (to_uci(m) == uci) {
+      e.perform_move(m);
       return;
     }
   }

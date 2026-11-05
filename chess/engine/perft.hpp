@@ -11,7 +11,8 @@
  * Perft ("performance test"): counts all legal move sequences of the given
  * length from the engine's current position. The results for well-known
  * positions are published, so comparing against them finds bugs in the move
- * generator. A promotion counts once per piece it can promote to (4 times).
+ * generator. A promotion counts once per piece it can promote to (it is
+ * four moves in the move list).
  *
  * The engine is left in the same position as before the call.
  * @param e The engine with the position to count from

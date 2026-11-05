@@ -159,17 +159,14 @@ std::vector<move> engine::get_all_legal_moves(game_history* gh) {
   return mg.generate_all_moves(gh);
 }
 
-void engine::perform_move(move& m) { apply_move(find_legal_move(m), piece()); }
-
-void engine::perform_move(move& m, piece& p) {
-  apply_move(find_legal_move(m), p);
-}
+void engine::perform_move(const move& m) { apply_move(find_legal_move(m)); }
 
 move engine::find_legal_move(const move& m) {
   ensure_legal_moves();
   for (const move& legal : this->legal_moves) {
     if (legal.from_x == m.from_x && legal.from_y == m.from_y &&
-        legal.to_x == m.to_x && legal.to_y == m.to_y) {
+        legal.to_x == m.to_x && legal.to_y == m.to_y &&
+        (!is_promotion(legal) || legal.promotion == m.promotion)) {
       // Return the engine's own move, not the caller's: mover and type come
       // from the move generator, so a caller with wrong data can do no harm.
       return legal;
@@ -178,23 +175,10 @@ move engine::find_legal_move(const move& m) {
   throw std::invalid_argument("illegal move: " + to_uci(m));
 }
 
-void engine::apply_move(move m, piece promotion) {
-  // m comes from find_legal_move(), so it is legal. Only the promotion piece
-  // still has to be checked.
+void engine::apply_move(move m) {
+  // m comes from find_legal_move(), so it is legal, including the promotion
+  // piece (queen, rook, bishop or knight).
   piece mover = m.mover;
-  if (is_promotion(m)) {
-    piece_type t = promotion.get_piece_type();
-    if (!promotion.is_valid() ||
-        promotion.get_piece_color() != mover.get_piece_color() ||
-        (t != QUEEN && t != ROOK && t != BISHOP && t != KNIGHT)) {
-      throw std::invalid_argument(
-          "promotion needs a queen, rook, bishop or "
-          "knight of the moving side: " +
-          to_uci(m));
-    }
-  } else if (promotion.is_valid()) {
-    throw std::invalid_argument("not a promotion move: " + to_uci(m));
-  }
 
   const uint8_t from_x = m.from_x, from_y = m.from_y;
   const uint8_t to_x = m.to_x, to_y = m.to_y;
@@ -225,7 +209,8 @@ void engine::apply_move(move m, piece promotion) {
     }
   } else if (is_promotion(m)) {
     new_gm->curr_board.remove_piece(mover, to_x, to_y);
-    new_gm->curr_board.add_piece(promotion, to_x, to_y);
+    new_gm->curr_board.add_piece(piece(m.promotion, mover.get_piece_color()),
+                                 to_x, to_y);
   }
   piece captured_piece = this->gh->curr_board.get_piece(to_x, to_y);
   if (captured_piece.is_valid() && mt != ENPASSANT) {

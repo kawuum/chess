@@ -24,38 +24,37 @@ struct move {
   uint8_t to_x;
   uint8_t to_y;
   move_type type;
+  // The piece a pawn promotes to: queen, rook, bishop or knight. Only
+  // meaningful for promotions (see is_promotion()); KING means "none". A pawn
+  // on the 7th rank thus has four different moves to the same square.
+  piece_type promotion = KING;
 
-  bool operator==(const move& other) {
-    // since we are (usually) only comparing moves from the same ply, the
-    // coordinates should be enough to determine whether two moves are equal
-    return this->from_x == other.from_x && this->from_y == other.from_y &&
-           this->to_x == other.to_x && this->to_y == other.to_y;
+  // Same squares, and for promotions the same promotion piece.
+  bool operator==(const move& other) const {
+    return from_x == other.from_x && from_y == other.from_y &&
+           to_x == other.to_x && to_y == other.to_y &&
+           promotion == other.promotion;
   }
 
-  bool operator!=(const move& other) {
-    // since we are (usually) only comparing moves from the same ply, the
-    // coordinates should be enough to determine whether two moves are equal
-    return !(this->from_x == other.from_x && this->from_y == other.from_y &&
-             this->to_x == other.to_x && this->to_y == other.to_y);
-  }
+  bool operator!=(const move& other) const { return !(*this == other); }
 };
 
-/** True for moves that need a promotion piece (with or without capture). */
+/** True for promotions (with or without capture). */
 inline bool is_promotion(const move& m) {
   return m.type == PROMOTION || m.type == CAPTURING_PROMOTION;
 }
 
 /**
  * Formats a move in UCI notation: start and target square, e.g. "e2e4",
- * plus the promotion piece for promotions ("e7e8q").
+ * plus the promotion piece for promotions ("e7e8q", "e7e8n").
  */
-inline std::string to_uci(const move& m, piece_type promotion = QUEEN) {
+inline std::string to_uci(const move& m) {
   std::string s;
   s += static_cast<char>('a' + m.from_x);
   s += static_cast<char>('1' + m.from_y);
   s += static_cast<char>('a' + m.to_x);
   s += static_cast<char>('1' + m.to_y);
-  if (is_promotion(m)) s += "kqbnrp"[promotion];  // same order as piece_type
+  if (is_promotion(m)) s += "kqbnrp"[m.promotion];  // order of piece_type
   return s;
 }
 

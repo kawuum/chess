@@ -104,12 +104,7 @@ void ChessBoardWidget::performAiMove() {
   ai_template* ai = ai_[static_cast<int>(eng_.get_color_to_move())].get();
   ::move m = ai->next_move();
   if (m.type == NO_MOVE) return;
-  if (m.type == PROMOTION || m.type == CAPTURING_PROMOTION) {
-    piece promoted(ai->get_promotion_piece_type(), eng_.get_color_to_move());
-    eng_.perform_move(m, promoted);
-  } else {
-    eng_.perform_move(m);
-  }
+  eng_.perform_move(m);  // a promotion already contains the AI's piece
   afterMove();
 }
 
@@ -177,14 +172,14 @@ void ChessBoardWidget::clearSelection() {
 }
 
 void ChessBoardWidget::performHumanMove(::move m) {
-  if (m.type == PROMOTION || m.type == CAPTURING_PROMOTION) {
+  if (is_promotion(m)) {
+    // A promotion is four legal moves to the same square, one per piece. Ask
+    // which piece, then play the matching one of the four.
     std::optional<piece_type> type = askPromotionPiece();
     if (!type) return;  // dialog cancelled: keep the selection, no move
-    piece promoted(*type, eng_.get_color_to_move());
-    eng_.perform_move(m, promoted);
-  } else {
-    eng_.perform_move(m);
+    m.promotion = *type;
   }
+  eng_.perform_move(m);
   clearSelection();
   afterMove();
 }

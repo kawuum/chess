@@ -23,7 +23,6 @@ class random_ai : public ai_template {
   random_ai(engine* e, std::string name, uint32_t seed);
 
   move next_move() override;
-  piece_type get_promotion_piece_type() override;
 
  private:
   std::mt19937 rng_;

@@ -284,6 +284,24 @@ void move_generation::queenmoves(piece mover, uint8_t from_x, uint8_t from_y,
   bishopmoves(mover, from_x, from_y, b, moves);
 }
 
+namespace {
+
+// Adds a legal pawn move. A promotion becomes four moves, one per piece the
+// pawn can turn into, so that the move list contains every legal move and a
+// search can tell an underpromotion from a queen promotion.
+void add_pawn_move(std::vector<move>& moves, move m) {
+  if (!is_promotion(m)) {
+    moves.push_back(m);
+    return;
+  }
+  for (piece_type t : {QUEEN, ROOK, BISHOP, KNIGHT}) {
+    m.promotion = t;
+    moves.push_back(m);
+  }
+}
+
+}  // namespace
+
 void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
                                 board& b, std::vector<move>& moves) {
   assert(mover.get_piece_type() == PAWN);
@@ -305,7 +323,7 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
         move m = (move){
             mover, from_x, from_y, (uint8_t)(from_x + x), (uint8_t)(from_y + y),
             mtype};
-        if (!is_check(b, m)) moves.push_back(m);
+        if (!is_check(b, m)) add_pawn_move(moves, m);
       } else if (!((from_y + y) ==
                    0)  // "empty" en passant square needs to be excluded, en
                        // passant captures on 0,0 are impossible; only y-ranks 2
@@ -332,7 +350,7 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
     if (!is_check(b, m)) {
       // we CANNOT just return if a single move would (still) result in check...
       // we might be able to block a check with a double move!
-      moves.push_back(m);
+      add_pawn_move(moves, m);
     }
     // check if we are still on the starting file
     if (from_y == starting_y) {

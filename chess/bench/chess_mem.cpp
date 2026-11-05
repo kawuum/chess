@@ -137,13 +137,7 @@ void measure_game() {
   HeapStats s = measure([&] {
     for (; plies < kMaxPlies && e.get_current_gamestate().result == RUNNING;
          ++plies) {
-      move m = ai.next_move();
-      if (is_promotion(m)) {
-        piece q(QUEEN, e.get_color_to_move());
-        e.perform_move(m, q);
-      } else {
-        e.perform_move(m);
-      }
+      e.perform_move(ai.next_move());
     }
   });
   record("game_plies", plies);

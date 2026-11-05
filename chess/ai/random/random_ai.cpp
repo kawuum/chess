@@ -18,5 +18,3 @@ move random_ai::next_move() {
   std::uniform_int_distribution<size_t> pick(0, moves.size() - 1);
   return moves[pick(rng_)];
 }
-
-piece_type random_ai::get_promotion_piece_type() { return QUEEN; }
