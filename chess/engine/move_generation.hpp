@@ -48,7 +48,10 @@ class move_generation {
   void rookmoves_helper(piece& mover, board& b, bool* stopped, uint8_t from_x,
                         uint8_t from_y, int8_t x_diff, int8_t y_diff,
                         std::vector<move>& moves);
-  game_history gamestate;
+  // The position moves are generated for, set by generate_all_moves(). Only
+  // looked at (castling rights, en passant square), never copied: it lives in
+  // the caller for the whole call.
+  const game_history* gamestate = nullptr;
 };
 
 #endif

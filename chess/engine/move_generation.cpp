@@ -6,7 +6,7 @@
 #include "attack_tables.hpp"
 
 std::vector<move> move_generation::generate_all_moves(game_history* gh) {
-  this->gamestate = *gh;
+  this->gamestate = gh;
   // Collect all moves in a scratch list that keeps its capacity from call to
   // call (thread_local: one per thread), so collecting needs no heap
   // allocation. The result is then copied once into a vector of exactly the
@@ -123,7 +123,7 @@ void move_generation::kingmoves(piece mover, uint8_t from_x, uint8_t from_y,
 
   // check castling options
   castling_rights cr =
-      this->gamestate.castlingrights[(int)mover.get_piece_color()];
+      this->gamestate->castlingrights[(int)mover.get_piece_color()];
   if (cr == BOTH || cr == SHORT) {
     // check if short castling is available
     // 1. no piece between king and rook
@@ -310,8 +310,8 @@ void move_generation::pawnmoves(piece mover, uint8_t from_x, uint8_t from_y,
                    0)  // "empty" en passant square needs to be excluded, en
                        // passant captures on 0,0 are impossible; only y-ranks 2
                        // and 5 should be possible
-                 && (std::get<0>(this->gamestate.ep_square) == (from_x + x)) &&
-                 (std::get<1>(this->gamestate.ep_square) == (from_y + y))) {
+                 && (std::get<0>(this->gamestate->ep_square) == (from_x + x)) &&
+                 (std::get<1>(this->gamestate->ep_square) == (from_y + y))) {
         move m = (move){mover,
                         from_x,
                         from_y,
