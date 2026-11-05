@@ -55,7 +55,9 @@ if(CHESS_BUILD_QT)
     qtgui/MainWindow.cpp
     qtgui/MainWindow.hpp
     qtgui/ChessBoardWidget.cpp
-    qtgui/ChessBoardWidget.hpp)
+    qtgui/ChessBoardWidget.hpp
+    qtgui/SimulationDialog.cpp
+    qtgui/SimulationDialog.hpp)
   set_target_properties(chess_qtgui PROPERTIES AUTOMOC ON)
   target_link_libraries(chess_qtgui PUBLIC chess_engine Qt6::Widgets)
 

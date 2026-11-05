@@ -7,6 +7,7 @@
 #include <QStatusBar>
 
 #include "ChessBoardWidget.hpp"
+#include "SimulationDialog.hpp"
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), board_(new ChessBoardWidget(this)) {
@@ -23,6 +24,11 @@ MainWindow::MainWindow(QWidget* parent)
   QAction* undo = game->addAction("&Undo Move");
   undo->setShortcut(QKeySequence::Undo);
   connect(undo, &QAction::triggered, board_, &ChessBoardWidget::undoMove);
+
+  game->addSeparator();
+
+  QAction* simulate = game->addAction("&Simulate Games...");
+  connect(simulate, &QAction::triggered, this, &MainWindow::showSimulation);
 
   game->addSeparator();
 
@@ -68,6 +74,16 @@ void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
     connect(action, &QAction::triggered, board_,
             [this, color, info] { board_->setPlayer(color, info); });
   }
+}
+
+void MainWindow::showSimulation() {
+  // Created on first use and then kept: closing only hides it, so the last
+  // results are still there when it is opened again. Not modal: the board
+  // stays usable while games are simulated.
+  if (simulation_ == nullptr) simulation_ = new SimulationDialog(this);
+  simulation_->show();
+  simulation_->raise();
+  simulation_->activateWindow();
 }
 
 void MainWindow::addAiSpeedMenu(QMenu* parent) {

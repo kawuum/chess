@@ -4,8 +4,11 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QComboBox>
 #include <QMenu>
 #include <QMenuBar>
+#include <QPushButton>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QTest>
 #include <algorithm>
@@ -14,6 +17,7 @@
 #include "../ai/ai_registry.hpp"
 #include "../qtgui/ChessBoardWidget.hpp"
 #include "../qtgui/MainWindow.hpp"
+#include "../qtgui/SimulationDialog.hpp"
 
 // Lets GoogleTest print a QString as text when a test fails, instead of its
 // raw bytes. GoogleTest finds this function by name (it must be in the same
@@ -76,6 +80,26 @@ class Gui : public testing::Test {
       }
     }
     return nullptr;
+  }
+
+  // Opens Game > Simulate Games and sets up the dialog like a user would.
+  SimulationDialog* open_simulation(const QString& first, const QString& second,
+                                    int games) {
+    for (QAction* a : window.menuBar()->actions()) {
+      if (a->text() == "&Game") {
+        find_action(a->menu(), "&Simulate Games...")->trigger();
+      }
+    }
+    auto* dialog = window.findChild<SimulationDialog*>();
+    if (dialog == nullptr) return nullptr;
+    dialog->findChild<QComboBox*>("firstAi")->setCurrentText(first);
+    dialog->findChild<QComboBox*>("secondAi")->setCurrentText(second);
+    dialog->findChild<QSpinBox*>("games")->setValue(games);
+    return dialog;
+  }
+
+  void click_button(QWidget* parent, const char* name) {
+    QTest::mouseClick(parent->findChild<QPushButton*>(name), Qt::LeftButton);
   }
 
   // Both colors played by the Random AI, chosen in the menu like a user does.
@@ -195,6 +219,51 @@ TEST_F(Gui, NaiveAiTakesAHangingQueen) {
   ASSERT_TRUE(p.is_valid());
   EXPECT_EQ(p.get_piece_type(), BISHOP);
   EXPECT_EQ(p.get_piece_color(), piece_color::BLACK);
+}
+
+TEST_F(Gui, SimulationPlaysGamesInTheBackground) {
+  SimulationDialog* dialog = open_simulation("Naive AI", "Random AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  EXPECT_TRUE(dialog->isVisible());
+  click_button(dialog, "start");
+  // The end is reported through the event loop, so right after the click
+  // the simulation is still running, however fast the games are.
+  EXPECT_TRUE(dialog->isRunning());
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+  EXPECT_TRUE(
+      dialog->resultText().contains("10 games: Naive AI against Random AI"))
+      << dialog->resultText().toStdString();
+  EXPECT_TRUE(dialog->resultText().contains("Naive AI wins:"));
+  EXPECT_EQ(status(), "White to move");  // the board is not touched
+}
+
+TEST_F(Gui, SimulationCanBeStopped) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 100000);
+  ASSERT_NE(dialog, nullptr);
+  click_button(dialog, "start");
+  // Wait until some games are played, then stop.
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] { return dialog->resultText().contains("games:"); }, 10000));
+  click_button(dialog, "stop");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 10000));
+  EXPECT_TRUE(dialog->resultText().startsWith("Stopped after"))
+      << dialog->resultText().toStdString();
+}
+
+TEST_F(Gui, DialogCanBeDeletedWhileSimulating) {
+  // Deleting the dialog while 100000 games run (e.g. when the program is
+  // closed) must stop its thread and wait for it. A thread that went on
+  // would use the deleted dialog: Qt aborts if a running QThread is
+  // destroyed, and a thread left running would write to freed memory during
+  // the wait below (the ASan build reports that).
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 100000);
+  ASSERT_NE(dialog, nullptr);
+  click_button(dialog, "start");
+  QTest::qWait(50);
+  ASSERT_TRUE(dialog->isRunning());
+  delete dialog;
+  QTest::qWait(200);
+  EXPECT_EQ(window.findChild<SimulationDialog*>(), nullptr);
 }
 
 // White pawn on a7, one step before promotion.
