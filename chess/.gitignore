@@ -1,5 +1,10 @@
-# Build-Verzeichnisse (CMakePresets)
+# Build directories (CMake presets)
 build/
+
+# Qt Creator: personal project settings
+.qtcreator/
+CMakeLists.txt.user*
+CMakeUserPresets.json
 
 # Prerequisites
 *.d
