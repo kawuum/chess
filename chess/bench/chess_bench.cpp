@@ -8,23 +8,28 @@
 //                                   FEN) and show the time
 //   chess_bench divide DEPTH [FEN]  like perft, split by the first move
 //
-// How it measures: every position runs perft again and again for a fixed
-// time; the number of completed runs is the result. More runs = faster.
+// How it measures: every case does one piece of work (a "run") again and
+// again for a fixed time; the number of completed runs is the result. More
+// runs = faster. Today all cases are perft runs; later cases for the
+// evaluation, the search or simulated games fit in the same way.
 //
-// How it judges: if the number of runs of any position differs by more than
-// 10% from the baseline, the test fails. Slower means a regression. Faster
-// means the baseline is out of date: after an intended speedup, save a new
-// one. Normal noise on this machine is about 2-3%, so 10% only catches real
-// changes.
+// How it judges: if the number of runs of any case differs by more than 10%
+// from the baseline, the test fails. Slower means a regression. Faster means
+// the baseline is out of date: after an intended speedup, save a new one.
+// Normal noise on this machine is about 2-4%, so 10% only catches real
+// changes. A case with fewer than 50 runs also fails: then one run more or
+// less is already 2% or more, and the verdict would be luck.
 //
-// Only meaningful in a release build. A wrong node count always fails (exit
-// code 2): a fast but wrong move generator is worth nothing.
+// Only meaningful in a release build. A wrong result always fails (exit
+// code 2): fast but wrong is worth nothing.
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -36,36 +41,55 @@ namespace {
 const char* const kStartFen =
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-struct BenchCase {
-  const char* name;
-  const char* fen;
-  int depth;
-  uint64_t nodes;  // reference count, see tests/perft_test.cpp
-};
-
-// Each case covers different rules: castling, en passant, promotions, pins.
-const std::vector<BenchCase> kSuite = {
-    {"start", kStartFen, 4, 197281},
-    {"kiwipete",
-     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 3,
-     97862},
-    {"position3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 5, 674624},
-    {"position4",
-     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 4,
-     422333},
-    {"position5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-     3, 62379},
-    {"position6",
-     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-     3, 89890},
-};
-
-constexpr double kSecondsPerCase = 8.0;     // 6 positions: about 50 s
+constexpr double kSecondsPerCase = 8.0;     // at most 7 cases: about 1 min
 constexpr double kTolerancePercent = 10.0;  // allowed difference in runs
+constexpr int kMinRuns = 50;                // fewer runs: case is too slow
+
+// One measured case. run() does the work once and returns a check value that
+// must equal expected, e.g. the perft node count. The check makes sure the
+// case measures correct work and always the same amount of it.
+struct BenchCase {
+  std::string name;
+  std::function<uint64_t()> run;
+  uint64_t expected;
+};
+
+// A perft case. The engine is set up once; every run counts from the same
+// position (perft takes back all moves it makes).
+BenchCase perft_case(const char* name, const char* fen, int depth,
+                     uint64_t nodes) {
+  auto e = std::make_shared<engine>();
+  e->new_game(fen);
+  return {name, [e, depth] { return perft(*e, depth); }, nodes};
+}
+
+// Each perft case covers different rules: castling, en passant, promotions,
+// pins. Reference node counts: see tests/perft_test.cpp.
+std::vector<BenchCase> make_suite() {
+  return {
+      perft_case("start", kStartFen, 4, 197281),
+      perft_case("kiwipete",
+                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w "
+                 "KQkq - 0 1",
+                 3, 97862),
+      perft_case("position3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 5,
+                 674624),
+      perft_case(
+          "position4",
+          "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 4,
+          422333),
+      perft_case("position5",
+                 "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 3,
+                 62379),
+      perft_case("position6",
+                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/"
+                 "R4RK1 w - - 0 10",
+                 3, 89890),
+  };
+}
 
 struct Result {
   std::string name;
-  uint64_t nodes;
   int runs;        // completed runs within kSecondsPerCase
   double seconds;  // time the runs took
 };
@@ -76,26 +100,22 @@ double now_seconds() {
 }
 
 Result run_case(const BenchCase& c) {
-  engine e;
-  e.new_game(c.fen);
   double start = now_seconds();
   int runs = 0;
   while (now_seconds() - start < kSecondsPerCase) {
-    uint64_t nodes = perft(e, c.depth);
-    if (nodes != c.nodes) {
-      std::fprintf(stderr,
-                   "FAIL: wrong node count for %s depth %d: %llu, expected "
-                   "%llu\n",
-                   c.name, c.depth, (unsigned long long)nodes,
-                   (unsigned long long)c.nodes);
+    uint64_t value = c.run();
+    if (value != c.expected) {
+      std::fprintf(stderr, "FAIL: wrong result for %s: %llu, expected %llu\n",
+                   c.name.c_str(), (unsigned long long)value,
+                   (unsigned long long)c.expected);
       std::exit(2);
     }
     ++runs;
   }
-  return {c.name, c.nodes, runs, now_seconds() - start};
+  return {c.name, runs, now_seconds() - start};
 }
 
-// Baseline file: one line per position "name runs", # starts a comment.
+// Baseline file: one line per case "name runs", # starts a comment.
 std::map<std::string, int> read_baseline(const std::string& path) {
   std::ifstream in(path);
   std::map<std::string, int> runs;
@@ -120,7 +140,7 @@ void save_baseline(const std::string& path,
   std::time_t t = std::time(nullptr);
   char date[32];
   std::strftime(date, sizeof date, "%Y-%m-%d", std::localtime(&t));
-  out << "# chess_bench baseline, " << date << ": completed perft runs per "
+  out << "# chess_bench baseline, " << date << ": completed runs per "
       << kSecondsPerCase << " s\n";
   for (const Result& r : results) out << r.name << " " << r.runs << "\n";
 }
@@ -132,17 +152,17 @@ int run_suite(const std::string& save_path, const std::string& compare_path) {
   std::map<std::string, int> baseline;
   if (!compare_path.empty()) baseline = read_baseline(compare_path);
 
-  std::printf("%-10s %6s %11s", "position", "runs", "nodes/s");
+  std::printf("%-10s %6s %9s", "case", "runs", "ms/run");
   if (!baseline.empty()) std::printf(" %9s %8s", "baseline", "change");
   std::printf("\n");
 
   std::vector<Result> results;
-  int slower = 0, faster = 0, missing = 0;
-  for (const BenchCase& c : kSuite) {
+  int slower = 0, faster = 0, missing = 0, too_slow = 0;
+  for (const BenchCase& c : make_suite()) {
     Result r = run_case(c);
     results.push_back(r);
-    std::printf("%-10s %6d %11.0f", r.name.c_str(), r.runs,
-                r.nodes * r.runs / r.seconds);
+    std::printf("%-10s %6d %9.2f", r.name.c_str(), r.runs,
+                r.seconds * 1000 / r.runs);
     if (!baseline.empty()) {
       auto base = baseline.find(r.name);
       if (base == baseline.end()) {
@@ -161,10 +181,24 @@ int run_suite(const std::string& save_path, const std::string& compare_path) {
         std::printf(" %9d %+7.0f%%  %s", base->second, change, verdict);
       }
     }
+    if (r.runs < kMinRuns) {
+      ++too_slow;
+      std::printf("  FAIL: too few runs");
+    }
     std::printf("\n");
     std::fflush(stdout);
   }
 
+  // Checked first and also when saving: a baseline with too few runs would
+  // judge by luck.
+  if (too_slow > 0) {
+    std::printf(
+        "\nFAIL: %d case(s) with fewer than %d runs in %.0f s. Make the case "
+        "smaller (e.g. a lower depth), otherwise the verdict is luck.\n",
+        too_slow, kMinRuns, kSecondsPerCase);
+    if (!save_path.empty()) std::printf("Baseline not saved.\n");
+    return 1;
+  }
   if (!save_path.empty()) {
     save_baseline(save_path, results);
     std::printf("\nbaseline saved to %s\n", save_path.c_str());
@@ -173,19 +207,19 @@ int run_suite(const std::string& save_path, const std::string& compare_path) {
 
   if (slower > 0 || missing > 0) {
     std::printf(
-        "\nFAIL: %d position(s) more than %.0f%% slower than the baseline "
-        "(regression).\n",
+        "\nFAIL: %d case(s) more than %.0f%% slower than the baseline "
+        "(regression) or missing in it.\n",
         slower + missing, kTolerancePercent);
     return 1;
   }
   if (faster > 0) {
     std::printf(
-        "\nFAIL: %d position(s) more than %.0f%% faster than the baseline.\n"
+        "\nFAIL: %d case(s) more than %.0f%% faster than the baseline.\n"
         "If the speedup is intended, save a new baseline with --save.\n",
         faster, kTolerancePercent);
     return 1;
   }
-  std::printf("\nPASS: all positions within %.0f%% of the baseline.\n",
+  std::printf("\nPASS: all cases within %.0f%% of the baseline.\n",
               kTolerancePercent);
   return 0;
 }
