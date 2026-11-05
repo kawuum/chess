@@ -108,7 +108,8 @@ if(CHESS_BUILD_TESTS)
     tests/naive_ai_test.cpp
     tests/notation_test.cpp
     tests/perft_test.cpp
-    tests/random_ai_test.cpp)
+    tests/random_ai_test.cpp
+    tests/symmetry_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
   # TIMEOUT: a test that hangs (e.g. on a dialog that waits for a click)
   # fails after 60 s instead of blocking ctest forever.
