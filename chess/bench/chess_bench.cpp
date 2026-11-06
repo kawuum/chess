@@ -4,9 +4,14 @@
 //   chess_bench --save FILE         run the suite and save it as baseline
 //   chess_bench --compare FILE      run the suite and judge it against a
 //                                   baseline: PASS (exit code 0) or FAIL (1)
+//   chess_bench --instructions [--save FILE | --compare FILE]
+//                                   the same cases, but counting instructions
+//                                   with callgrind instead of measuring time
 //   chess_bench perft DEPTH [FEN]   count one position (start position if no
 //                                   FEN) and show the time
 //   chess_bench divide DEPTH [FEN]  like perft, split by the first move
+//   chess_bench run CASE            one run of one case (used by
+//                                   --instructions under callgrind)
 //
 // How it measures: every case does one piece of work (a "run") again and
 // again for a fixed time; the number of completed runs is the result. More
@@ -20,12 +25,25 @@
 // changes. A case with fewer than 50 runs also fails: then one run more or
 // less is already 2% or more, and the verdict would be luck.
 //
+// --instructions: every case runs once under valgrind's callgrind tool, which
+// counts the machine instructions executed in that run. Unlike a time, that
+// number does not depend on what else the computer is doing: it is the same
+// in every run (only the run itself is counted, see measured_run()). So it
+// catches regressions of 1% even on a busy machine. It cannot see cache
+// effects, though, so it adds to the time measurement, it does not replace
+// it. Judged like the times: more than 1% more instructions = FAIL (slower),
+// more than 1% fewer = FAIL (baseline out of date). About 1-2 s per case.
+//
 // Only meaningful in a release build. A wrong result always fails (exit
 // code 2): fast but wrong is worth nothing.
+#include <unistd.h>
+
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -44,6 +62,8 @@ const char* const kStartFen =
 constexpr double kSecondsPerCase = 8.0;     // at most 7 cases: about 1 min
 constexpr double kTolerancePercent = 10.0;  // allowed difference in runs
 constexpr int kMinRuns = 50;                // fewer runs: case is too slow
+// Instructions are counted exactly, so a small tolerance is enough.
+constexpr double kInstructionTolerancePercent = 1.0;
 
 // One measured case. run() does the work once and returns a check value that
 // must equal expected, e.g. the perft node count. The check makes sure the
@@ -86,6 +106,171 @@ std::vector<BenchCase> make_suite() {
                  "R4RK1 w - - 0 10",
                  3, 89890),
   };
+}
+
+// One run of a case, as a function of its own: under callgrind only this
+// function is counted (--toggle-collect), not the program start or the
+// setup of the case. noinline keeps the compiler from merging it into the
+// caller, which would make it invisible to callgrind.
+__attribute__((noinline)) uint64_t measured_run(const BenchCase& c) {
+  return c.run();
+}
+
+// "chess_bench run NAME": one run of one case, checked.
+int run_one(const std::string& name) {
+  for (const BenchCase& c : make_suite()) {
+    if (c.name != name) continue;
+    uint64_t value = measured_run(c);
+    if (value != c.expected) {
+      std::fprintf(stderr, "FAIL: wrong result for %s: %llu, expected %llu\n",
+                   c.name.c_str(), (unsigned long long)value,
+                   (unsigned long long)c.expected);
+      return 2;
+    }
+    return 0;
+  }
+  std::fprintf(stderr, "no case named %s\n", name.c_str());
+  return 2;
+}
+
+// The path of this program, to start it again under callgrind.
+std::string own_path() {
+  char buffer[4096];
+  ssize_t n = readlink("/proc/self/exe", buffer, sizeof buffer - 1);
+  if (n <= 0) return "chess_bench";
+  buffer[n] = '\0';
+  return buffer;
+}
+
+// Runs one case under callgrind and returns the instructions it counted in
+// measured_run(). Exits with code 2 if valgrind is missing or the run fails.
+uint64_t count_instructions(const std::string& name) {
+  const std::string out =
+      (std::filesystem::temp_directory_path() / "chess_bench.callgrind")
+          .string();
+  const std::string command =
+      "valgrind --tool=callgrind --callgrind-out-file='" + out +
+      "' --toggle-collect='*measured_run*' '" + own_path() + "' run " + name +
+      " 2>&1";
+  FILE* pipe = popen(command.c_str(), "r");
+  if (pipe == nullptr) {
+    std::fprintf(stderr, "cannot start valgrind\n");
+    std::exit(2);
+  }
+  // valgrind reports "==1234== Collected : 99937617" at the end.
+  uint64_t count = 0;
+  bool found = false;
+  std::string output;
+  char line[512];
+  while (std::fgets(line, sizeof line, pipe) != nullptr) {
+    output += line;
+    const char* collected = std::strstr(line, "Collected :");
+    if (collected != nullptr) {
+      count = std::strtoull(collected + 11, nullptr, 10);
+      found = true;
+    }
+  }
+  const int status = pclose(pipe);
+  std::remove(out.c_str());
+  if (status != 0 || !found) {
+    std::fprintf(stderr,
+                 "callgrind run of %s failed (is valgrind installed?):\n%s",
+                 name.c_str(), output.c_str());
+    std::exit(2);
+  }
+  return count;
+}
+
+// Instruction baseline: one line per case "name instructions".
+std::map<std::string, uint64_t> read_counts(const std::string& path) {
+  std::ifstream in(path);
+  std::map<std::string, uint64_t> counts;
+  std::string line;
+  while (std::getline(in, line)) {
+    if (line.empty() || line[0] == '#') continue;
+    std::istringstream fields(line);
+    std::string name;
+    uint64_t count;
+    if (fields >> name >> count) counts[name] = count;
+  }
+  if (counts.empty()) {
+    std::fprintf(stderr, "cannot read baseline %s\n", path.c_str());
+    std::exit(2);
+  }
+  return counts;
+}
+
+int run_instruction_suite(const std::string& save_path,
+                          const std::string& compare_path) {
+#ifndef NDEBUG
+  std::printf("WARNING: debug build, the results are not meaningful.\n\n");
+#endif
+  std::map<std::string, uint64_t> baseline;
+  if (!compare_path.empty()) baseline = read_counts(compare_path);
+
+  std::printf("%-10s %14s", "case", "instructions");
+  if (!baseline.empty()) std::printf(" %14s %8s", "baseline", "change");
+  std::printf("\n");
+
+  std::vector<std::pair<std::string, uint64_t>> results;
+  int more = 0, fewer = 0, missing = 0;
+  for (const BenchCase& c : make_suite()) {
+    const uint64_t count = count_instructions(c.name);
+    results.emplace_back(c.name, count);
+    std::printf("%-10s %14llu", c.name.c_str(), (unsigned long long)count);
+    if (!baseline.empty()) {
+      auto base = baseline.find(c.name);
+      if (base == baseline.end()) {
+        ++missing;
+        std::printf("   (not in baseline)  FAIL");
+      } else {
+        double change = (double(count) / double(base->second) - 1) * 100;
+        const char* verdict = "ok";
+        if (change > kInstructionTolerancePercent) {
+          verdict = "FAIL: more";
+          ++more;
+        } else if (change < -kInstructionTolerancePercent) {
+          verdict = "FAIL: fewer";
+          ++fewer;
+        }
+        std::printf(" %14llu %+7.2f%%  %s", (unsigned long long)base->second,
+                    change, verdict);
+      }
+    }
+    std::printf("\n");
+    std::fflush(stdout);
+  }
+
+  if (!save_path.empty()) {
+    std::ofstream out(save_path);
+    std::time_t t = std::time(nullptr);
+    char date[32];
+    std::strftime(date, sizeof date, "%Y-%m-%d", std::localtime(&t));
+    out << "# chess_bench instruction baseline, " << date
+        << ": instructions of one run, counted by callgrind\n";
+    for (const auto& r : results) out << r.first << " " << r.second << "\n";
+    std::printf("\nbaseline saved to %s\n", save_path.c_str());
+  }
+  if (baseline.empty()) return 0;
+
+  if (more > 0 || missing > 0) {
+    std::printf(
+        "\nFAIL: %d case(s) need more than %.0f%% more instructions than the "
+        "baseline (regression) or are missing in it.\n",
+        more + missing, kInstructionTolerancePercent);
+    return 1;
+  }
+  if (fewer > 0) {
+    std::printf(
+        "\nFAIL: %d case(s) need more than %.0f%% fewer instructions than the "
+        "baseline.\nIf the speedup is intended, save a new baseline with "
+        "--save.\n",
+        fewer, kInstructionTolerancePercent);
+    return 1;
+  }
+  std::printf("\nPASS: all cases within %.0f%% of the baseline.\n",
+              kInstructionTolerancePercent);
+  return 0;
 }
 
 struct Result {
@@ -246,9 +431,11 @@ int run_perft(int depth, const std::string& fen, bool divide) {
 
 void usage() {
   std::fprintf(stderr,
-               "usage: chess_bench [--save FILE | --compare FILE]\n"
+               "usage: chess_bench [--instructions] [--save FILE | --compare "
+               "FILE]\n"
                "       chess_bench perft DEPTH [FEN]\n"
-               "       chess_bench divide DEPTH [FEN]\n");
+               "       chess_bench divide DEPTH [FEN]\n"
+               "       chess_bench run CASE\n");
 }
 
 }  // namespace
@@ -270,9 +457,13 @@ int main(int argc, char** argv) {
       return run_perft(depth, fen.empty() ? kStartFen : fen,
                        args[0] == "divide");
     }
+    if (args.size() == 2 && args[0] == "run") return run_one(args[1]);
     std::string save, compare;
+    bool instructions = false;
     for (size_t i = 0; i < args.size(); ++i) {
-      if (args[i] == "--save" && i + 1 < args.size()) {
+      if (args[i] == "--instructions") {
+        instructions = true;
+      } else if (args[i] == "--save" && i + 1 < args.size()) {
         save = args[++i];
       } else if (args[i] == "--compare" && i + 1 < args.size()) {
         compare = args[++i];
@@ -281,7 +472,8 @@ int main(int argc, char** argv) {
         return 2;
       }
     }
-    return run_suite(save, compare);
+    return instructions ? run_instruction_suite(save, compare)
+                        : run_suite(save, compare);
   } catch (const std::exception& ex) {
     std::fprintf(stderr, "error: %s\n", ex.what());
     return 2;
