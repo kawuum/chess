@@ -24,9 +24,14 @@ std::vector<std::string> self_play(const ai_info& info, uint32_t seed,
   return played;
 }
 
+// Half moves of the test games: enough to see the AI's choices, few enough
+// for searching AIs in the debug build.
+constexpr int kPlies = 10;
+
 TEST(AiRegistry, SameSeedPlaysSameGame) {
   for (const ai_info& info : available_ais()) {
-    EXPECT_EQ(self_play(info, 5, 40), self_play(info, 5, 40)) << info.name;
+    EXPECT_EQ(self_play(info, 5, kPlies), self_play(info, 5, kPlies))
+        << info.name;
   }
 }
 
@@ -35,9 +40,11 @@ TEST(AiRegistry, UsesRandomTellsWhetherTheSeedMatters) {
   // that does not must ignore the seed (the GUI hides the seed for it).
   for (const ai_info& info : available_ais()) {
     if (info.uses_random) {
-      EXPECT_NE(self_play(info, 1, 40), self_play(info, 2, 40)) << info.name;
+      EXPECT_NE(self_play(info, 1, kPlies), self_play(info, 2, kPlies))
+          << info.name;
     } else {
-      EXPECT_EQ(self_play(info, 1, 40), self_play(info, 2, 40)) << info.name;
+      EXPECT_EQ(self_play(info, 1, kPlies), self_play(info, 2, kPlies))
+          << info.name;
     }
   }
 }

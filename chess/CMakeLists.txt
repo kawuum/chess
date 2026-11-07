@@ -37,6 +37,7 @@ add_library(chess_engine STATIC
   engine/scoring.cpp
   ai/random/random_ai.cpp
   ai/naive/naive_ai.cpp
+  ai/minimax/minimax_ai.cpp
   ai/ai_registry.cpp
   ai/match.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
@@ -104,6 +105,7 @@ if(CHESS_BUILD_TESTS)
     tests/evaluation_test.cpp
     tests/fen_test.cpp
     tests/match_test.cpp
+    tests/minimax_test.cpp
     tests/memory_layout_test.cpp
     tests/move_validation_test.cpp
     tests/naive_ai_test.cpp

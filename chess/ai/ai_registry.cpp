@@ -1,5 +1,6 @@
 #include "ai_registry.hpp"
 
+#include "minimax/minimax_ai.hpp"
 #include "naive/naive_ai.hpp"
 #include "random/random_ai.hpp"
 
@@ -16,6 +17,12 @@ const std::vector<ai_info>& available_ais() {
       {"Naive AI",
        [](engine* e, uint32_t seed) {
          return std::make_unique<naive_ai>(e, "Naive AI", seed);
+       },
+       /*uses_random=*/true},
+      // Looks 3 half moves ahead; at random among equally good moves.
+      {"Minimax AI",
+       [](engine* e, uint32_t seed) {
+         return std::make_unique<minimax_ai>(e, "Minimax AI", seed);
        },
        /*uses_random=*/true},
   };
