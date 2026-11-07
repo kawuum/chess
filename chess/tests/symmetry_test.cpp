@@ -2,8 +2,9 @@
 // position of many games is compared with its mirror image: the board
 // flipped top to bottom, the colors swapped, the other side to move, and
 // castling rights, en passant square and half move clock mirrored too.
-// Move generation, check, the game result, the evaluation helpers and the
-// naive AI's rating must then give mirrored answers. A rule that is only
+// Move generation, check, the game result, the evaluation helpers, the
+// naive AI's rating and the search evaluation (scoring) must then give
+// mirrored answers. A rule that is only
 // right for one color (e.g. a pawn direction or a castling square) shows
 // up here.
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include "../ai/ai_registry.hpp"
 #include "../ai/naive/naive_ai.hpp"
 #include "../engine/evaluation.hpp"
+#include "../engine/scoring.hpp"
 #include "test_helpers.hpp"
 
 namespace {
@@ -141,6 +143,7 @@ TEST(Symmetry, MirroredPositionsBehaveAlike) {
                 evaluation::defended_pieces(b, B).get_num_bits_set())
           << fen;
       ASSERT_EQ(judge.evaluate(mb, B), judge.evaluate(b, W)) << fen;
+      ASSERT_EQ(scoring::score(mb, B), scoring::score(b, W)) << fen;
 
       if (gh.result != RUNNING) break;
       ai_template& ai = gh.to_move == W ? *white : *black;

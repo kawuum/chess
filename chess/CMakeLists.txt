@@ -34,6 +34,7 @@ add_library(chess_engine STATIC
   engine/move_generation.cpp
   engine/notation.cpp
   engine/perft.cpp
+  engine/scoring.cpp
   ai/random/random_ai.cpp
   ai/naive/naive_ai.cpp
   ai/ai_registry.cpp
@@ -109,6 +110,7 @@ if(CHESS_BUILD_TESTS)
     tests/notation_test.cpp
     tests/perft_test.cpp
     tests/random_ai_test.cpp
+    tests/scoring_test.cpp
     tests/symmetry_test.cpp)
   target_link_libraries(chess_tests PRIVATE chess_engine GTest::gtest_main)
   # TIMEOUT: a test that hangs (e.g. on a dialog that waits for a click)
