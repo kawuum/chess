@@ -6,6 +6,14 @@ namespace draw_rules {
 
 namespace {
 
+// True if either color has a piece of this type: one test of the raw bits
+// instead of counting them (insufficient_material() runs after every move).
+bool any(const board& b, piece_type t) {
+  return (b.get_bit_matrix_for_piece(piece(t, piece_color::WHITE)).get_raw() |
+          b.get_bit_matrix_for_piece(piece(t, piece_color::BLACK)).get_raw()) !=
+         0;
+}
+
 int count(const board& b, piece_type t) {
   return b.get_bit_matrix_for_piece(piece(t, piece_color::WHITE))
              .get_num_bits_set() +
@@ -43,7 +51,7 @@ bool same_position(const game_history& a, const game_history& b) {
 
 bool insufficient_material(const board& b) {
   // With a pawn, a rook or a queen a mate is always possible.
-  if (count(b, PAWN) > 0 || count(b, ROOK) > 0 || count(b, QUEEN) > 0) {
+  if (any(b, PAWN) || any(b, ROOK) || any(b, QUEEN)) {
     return false;
   }
   const int knights = count(b, KNIGHT);
