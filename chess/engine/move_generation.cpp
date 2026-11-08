@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+#include "../datastructures/bits.hpp"
 #include "../datastructures/enums.hpp"
 #include "attack_tables.hpp"
 
@@ -483,7 +484,7 @@ bool move_generation::is_check(board& b, move m) {
   uint64_t king =
       new_board.get_bit_matrix_for_piece(piece(KING, color)).get_raw();
   if (king == 0) return false;  // no king (only in artificial test positions)
-  int index = __builtin_clzll(king);
+  int index = bits::leading_zeros(king);
   piece_color opponent =
       color == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
   return is_square_attacked(new_board, index % 8, index / 8, opponent);

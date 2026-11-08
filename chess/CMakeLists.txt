@@ -105,6 +105,7 @@ if(CHESS_BUILD_TESTS)
     tests/alphabeta_test.cpp
     tests/attack_tables_test.cpp
     tests/bit_matrix_test.cpp
+    tests/bits_test.cpp
     tests/board_test.cpp
     tests/castling_test.cpp
     tests/check_test.cpp

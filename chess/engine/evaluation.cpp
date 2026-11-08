@@ -1,5 +1,6 @@
 #include "evaluation.hpp"
 
+#include "../datastructures/bits.hpp"
 #include "attack_tables.hpp"
 
 namespace evaluation {
@@ -22,13 +23,13 @@ piece_color opponent(piece_color c) {
   return c == piece_color::WHITE ? piece_color::BLACK : piece_color::WHITE;
 }
 
-// Calls f(x, y) for every set bit. __builtin_clzll counts the zero bits
+// Calls f(x, y) for every set bit. bits::leading_zeros counts the zero bits
 // above the highest set bit; in the bit order of bit_matrix (a1 = highest
 // bit) that is directly the square index 8 * y + x.
 template <typename F>
 void for_each_square(uint64_t bits, F f) {
   while (bits != 0) {
-    int i = __builtin_clzll(bits);
+    int i = bits::leading_zeros(bits);
     f(i % 8, i / 8);
     bits &= ~((uint64_t{1} << 63) >> i);  // clear this bit
   }
@@ -103,10 +104,9 @@ int attackers(const board& b, int x, int y, piece_color c) {
   // the other color is used.
   const int s = 8 * y + x;
   const int other = static_cast<int>(opponent(c));
-  int count =
-      __builtin_popcountll(kAttacks.knight[s] & pieces(b, KNIGHT, c)) +
-      __builtin_popcountll(kAttacks.king[s] & pieces(b, KING, c)) +
-      __builtin_popcountll(kAttacks.pawn[other][s] & pieces(b, PAWN, c));
+  int count = bits::popcount(kAttacks.knight[s] & pieces(b, KNIGHT, c)) +
+              bits::popcount(kAttacks.king[s] & pieces(b, KING, c)) +
+              bits::popcount(kAttacks.pawn[other][s] & pieces(b, PAWN, c));
   for (const auto& d : kStraight) {
     if (first_piece_is(b, x, y, d[0], d[1], c, ROOK, QUEEN)) ++count;
   }

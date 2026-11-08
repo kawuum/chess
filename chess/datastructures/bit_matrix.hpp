@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "bits.hpp"
+
 /**
  * An 8x8 bitboard: one bit per square, stored in a single uint64_t.
  *
@@ -34,13 +36,9 @@ class bit_matrix {
   /** Sets the bit of square (x, y) to 0. */
   void unset_bit_at(uint8_t x, uint8_t y) { unset_bit_at((8 * y) + x); }
 
-  /**
-   * Number of set bits. __builtin_popcountll is a GCC/Clang builtin. It only
-   * becomes the fast POPCNT instruction if the compiler may use it (-mpopcnt
-   * or a matching -march); otherwise it is a call to a software routine.
-   */
+  /** Number of set bits (see bits.hpp). */
   constexpr uint8_t get_num_bits_set() const {
-    return static_cast<uint8_t>(__builtin_popcountll(raw));
+    return static_cast<uint8_t>(bits::popcount(raw));
   }
 
   /** Sets all bits to 0. */
