@@ -315,9 +315,11 @@ void engine::apply_draw_rules() {
 }
 
 void engine::ensure_legal_moves() {
-  // The legal moves of the current position are cached in legal_moves. After
-  // undo_move() the cache is empty and is filled again on first use. When the
-  // game is over there are no legal moves, so nothing has to be generated.
+  // The legal moves of the current position are cached in legal_moves.
+  // perform_move() leaves the cache empty (it only finds out whether there
+  // is a legal move at all), and so may undo_move(); it is filled on first
+  // use. When the game is over there are no legal moves, so nothing has to
+  // be generated.
   if (this->legal_moves.empty() && this->gh->result == RUNNING) {
     move_generation mg;
     this->legal_moves = mg.generate_all_moves(this->gh.get());
@@ -450,11 +452,13 @@ void engine::apply_move(move m) {
   // Keep the legal moves of the previous position: undo_move() gets them back
   // without generating them again.
   this->legal_moves_history.push_back(std::move(this->legal_moves));
-  // Generate the legal moves of the new position right away: this tells us
-  // whether the game is over (mate or stalemate), and the next perform_move()
-  // can check its move against this list.
+  // Whether the game is over (mate or stalemate) needs only one legal move,
+  // not all of them. In a search most new positions are only rated, never
+  // looked into, so the full list is generated only when someone asks for
+  // it (ensure_legal_moves()).
   move_generation mg;
-  this->legal_moves = mg.generate_all_moves(this->gh.get());
+  mg.set_check_and_result(this->gh.get());
+  this->legal_moves.clear();  // moved from above: make it a valid empty list
   apply_draw_rules();
 }
 

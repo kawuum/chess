@@ -18,6 +18,13 @@ class move_generation {
    * stalemate).
    */
   std::vector<move> generate_all_moves(game_history* gh);
+  /**
+   * Sets gh->is_check and, if there is no legal move, gh->result (checkmate
+   * or stalemate), like generate_all_moves(), but stops at the first legal
+   * move it finds instead of collecting all of them: after a move in the
+   * search, often only this is needed.
+   */
+  void set_check_and_result(game_history* gh);
   bool is_check(board& b, move m);
   /**
    * True if a piece of color "by" attacks square (x, y) on board b.
@@ -25,6 +32,10 @@ class move_generation {
   static bool is_square_attacked(board& b, int x, int y, piece_color by);
 
  private:
+  // Sets gh->is_check, and gh->result if any_legal_move is false.
+  void set_check_and_result(game_history* gh, bool any_legal_move);
+  // True if the side to move has at least one legal move.
+  bool has_legal_move(board& b, piece_color to_move);
   // All of these append the legal moves they find to "moves".
   void generate_all_moves(board& b, piece_color to_move,
                           std::vector<move>& moves);

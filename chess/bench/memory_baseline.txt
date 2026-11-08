@@ -8,10 +8,10 @@ sizeof_engine 64
 boards_1M_peak_bytes 160000000
 game_states_1M_peak_bytes 232000000
 game_plies 200
-game_live_bytes 100923
+game_live_bytes 100860
 game_live_bytes_per_ply 504
-game_allocations 610
-game_allocated_bytes 158595
+game_allocations 614
+game_allocated_bytes 158667
 perft_start_d4_allocations 27970
 perft_start_d4_allocated_bytes 5732394
 perft_start_d4_peak_bytes 2382

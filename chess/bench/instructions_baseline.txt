@@ -1,7 +1,7 @@
-# chess_bench instruction baseline, 2026-11-06: instructions of one run, counted by callgrind
-start 203593209
-kiwipete 99937627
-position3 686735294
-position4 415241200
-position5 52749991
-position6 85372492
+# chess_bench instruction baseline, 2026-11-08: instructions of one run, counted by callgrind
+start 216355595
+kiwipete 104634303
+position3 794488852
+position4 438503625
+position5 55750835
+position6 91041424

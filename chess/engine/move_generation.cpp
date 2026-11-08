@@ -17,14 +17,24 @@ std::vector<move> move_generation::generate_all_moves(game_history* gh) {
   scratch.clear();
   generate_all_moves(gh->curr_board, gh->to_move, scratch);
   std::vector<move> res(scratch.begin(), scratch.end());
+  set_check_and_result(gh, !res.empty());
+  return res;
+}
 
+void move_generation::set_check_and_result(game_history* gh) {
+  this->gamestate = gh;
+  set_check_and_result(gh, has_legal_move(gh->curr_board, gh->to_move));
+}
+
+void move_generation::set_check_and_result(game_history* gh,
+                                           bool any_legal_move) {
   // A "null move" of the king: is_check() then just tells whether the side to
   // move is in check right now.
   move null_move = {piece(KING, gh->to_move), 0, 0, 0, 0, NO_MOVE};
   gh->is_check = is_check(gh->curr_board, null_move);
   // No legal moves means the game is over: checkmate if in check, otherwise
   // stalemate.
-  if (res.empty()) {
+  if (!any_legal_move) {
     if (gh->is_check) {
       gh->result = gh->to_move == piece_color::WHITE ? BLACK_WIN : WHITE_WIN;
     } else {
@@ -32,7 +42,27 @@ std::vector<move> move_generation::generate_all_moves(game_history* gh) {
       gh->draw = STALEMATE;
     }
   }
-  return res;
+}
+
+bool move_generation::has_legal_move(board& b, piece_color to_move) {
+  // The moves of one piece at a time: as soon as a piece has a legal move,
+  // the others need not be looked at. Every move of a piece costs a check
+  // test, so pieces with few moves come first (pawns, knights), the queen
+  // and the king last.
+  static thread_local std::vector<move> piece_moves;
+  for (piece_type type : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING}) {
+    const piece p(type, to_move);
+    uint64_t squares = b.get_bit_matrix_for_piece(p).get_raw();
+    while (squares != 0) {
+      // Bit order of bit_matrix: the leading zeros are the square index.
+      const int i = bits::leading_zeros(squares);
+      squares &= ~((uint64_t{1} << 63) >> i);
+      piece_moves.clear();
+      generate_moves(p, i % 8, i / 8, b, piece_moves);
+      if (!piece_moves.empty()) return true;
+    }
+  }
+  return false;
 }
 
 void move_generation::generate_all_moves(board& b, piece_color to_move,

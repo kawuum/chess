@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <random>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
+#include "../engine/move_generation.hpp"
 #include "test_helpers.hpp"
 
 namespace {
@@ -159,6 +161,62 @@ TEST(MoveValidation, CheapGettersMatchTheCopyingOnes) {
     ASSERT_EQ(e.get_all_legal_moves(), cached);
     e.perform_move(cached[rng() % cached.size()]);
   }
+}
+
+// perform_move() only looks for one legal move to find checkmate and
+// stalemate. Check and result must be exactly what the full move list says,
+// in random games (which end in mates, stalemates and draws) and in a few
+// set positions.
+TEST(MoveValidation, ResultAfterMoveMatchesFullGeneration) {
+  auto check = [](engine& e, const std::string& where) {
+    game_history full = e.get_current_gamestate();
+    full.result = RUNNING;
+    full.draw = NO_DRAW;
+    full.is_check = !full.is_check;  // must be set again
+    move_generation mg;
+    const std::vector<move> moves = mg.generate_all_moves(&full);
+    const game_history& state = e.current_state();
+    EXPECT_EQ(state.is_check, full.is_check) << where;
+    if (state.result == DRAW && state.draw != STALEMATE) {
+      EXPECT_FALSE(moves.empty()) << where;  // a draw rule ended the game
+    } else {
+      EXPECT_EQ(state.result, full.result) << where;
+      EXPECT_EQ(state.draw, full.draw) << where;
+    }
+  };
+  int mates = 0, stalemates = 0;
+  for (uint32_t seed = 1; seed <= 60; ++seed) {
+    engine e;
+    e.new_game();
+    std::mt19937 rng(seed);
+    for (int ply = 0; ply < 400; ++ply) {
+      const std::vector<move> moves = e.get_all_legal_moves();
+      if (moves.empty()) break;
+      e.perform_move(moves[rng() % moves.size()]);
+      check(e, "seed " + std::to_string(seed) + " ply " + std::to_string(ply));
+    }
+    const game_result r = e.current_state().result;
+    if (r == WHITE_WIN || r == BLACK_WIN) ++mates;
+    if (r == DRAW && e.current_state().draw == STALEMATE) ++stalemates;
+  }
+  // Mates in one move, stalemate in one move: the last move ends the game.
+  const char* const endings[][2] = {
+      {"7k/8/6K1/8/8/8/8/5Q2 w - - 0 1", "f1f8"},  // mate
+      {"7k/8/5K2/8/8/8/8/6Q1 w - - 0 1", "g1g6"},  // stalemate
+      {"k7/8/1K6/8/8/8/8/7R w - - 0 1", "h1h8"},   // mate
+  };
+  for (const auto& ending : endings) {
+    engine e;
+    e.new_game(ending[0]);
+    play(e, ending[1]);
+    check(e, ending[0]);
+    const game_result r = e.current_state().result;
+    if (r == WHITE_WIN || r == BLACK_WIN) ++mates;
+    if (r == DRAW && e.current_state().draw == STALEMATE) ++stalemates;
+  }
+  // The test must really have seen both endings.
+  EXPECT_GE(mates, 2);
+  EXPECT_GE(stalemates, 1);
 }
 
 }  // namespace
