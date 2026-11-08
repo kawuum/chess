@@ -1,7 +1,9 @@
 // engine::perform_move() only accepts legal moves. Anything else throws
 // std::invalid_argument and leaves the position unchanged.
 #include <algorithm>
+#include <random>
 #include <stdexcept>
+#include <vector>
 
 #include "test_helpers.hpp"
 
@@ -128,6 +130,35 @@ TEST(MoveValidation, UnderpromotionToKnight) {
   ASSERT_TRUE(p.is_valid());
   EXPECT_EQ(p.get_piece_type(), KNIGHT);
   EXPECT_EQ(p.get_piece_color(), piece_color::WHITE);
+}
+
+// The cheap getters for the search (no copy of the game state, moves from
+// the cache) must give the same as the copying ones, also after undo_move().
+TEST(MoveValidation, CheapGettersMatchTheCopyingOnes) {
+  engine e;
+  e.new_game();
+  std::mt19937 rng(5);
+  for (int ply = 0; ply < 120; ++ply) {
+    game_history copy = e.get_current_gamestate();
+    const game_history& state = e.current_state();
+    ASSERT_TRUE(state.curr_board == copy.curr_board);
+    ASSERT_EQ(state.num_halfmoves, copy.num_halfmoves);
+    ASSERT_EQ(state.result, copy.result);
+    const std::vector<move> cached = e.get_all_legal_moves();
+    ASSERT_EQ(cached, e.get_all_legal_moves(&copy)) << "ply " << ply;
+    if (cached.empty()) break;
+    // The reference stays valid while later moves are played and undone.
+    e.perform_move(cached[rng() % cached.size()]);
+    const std::vector<move> replies = e.get_all_legal_moves();
+    if (!replies.empty()) {
+      e.perform_move(replies[0]);
+      e.undo_move();
+    }
+    e.undo_move();
+    ASSERT_EQ(state.num_halfmoves, copy.num_halfmoves);
+    ASSERT_EQ(e.get_all_legal_moves(), cached);
+    e.perform_move(cached[rng() % cached.size()]);
+  }
 }
 
 }  // namespace

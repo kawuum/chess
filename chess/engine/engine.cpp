@@ -335,6 +335,11 @@ std::vector<move> engine::get_legal_moves(uint8_t from_x, uint8_t from_y) {
   return possible_moves;
 }
 
+std::vector<move> engine::get_all_legal_moves() {
+  ensure_legal_moves();
+  return this->legal_moves;
+}
+
 std::vector<move> engine::get_all_legal_moves(game_history* gh) {
   if (*gh == *(this->gh.get())) {
     // the current position: use the cache

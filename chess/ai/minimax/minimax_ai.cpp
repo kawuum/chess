@@ -15,11 +15,10 @@ minimax_ai::minimax_ai(engine* e, std::string name, uint32_t seed, int depth)
 
 move minimax_ai::next_move() {
   positions_ = 0;
-  game_history gh = eng->get_current_gamestate();
   std::vector<move> best;
   int best_score = -kInfinity;
 
-  for (const move& m : eng->get_all_legal_moves(&gh)) {
+  for (const move& m : eng->get_all_legal_moves()) {
     eng->perform_move(m);
     // The opponent is to move now: its score, negated, is ours.
     const int score = -negamax(depth_ - 1, 1);
@@ -42,7 +41,7 @@ move minimax_ai::next_move() {
 
 int minimax_ai::negamax(int depth, int ply) {
   ++positions_;
-  game_history gh = eng->get_current_gamestate();
+  const game_history& gh = eng->current_state();
 
   // The game is over in this position.
   if (gh.result == DRAW) return 0;
@@ -57,7 +56,7 @@ int minimax_ai::negamax(int depth, int ply) {
 
   // Otherwise try every move; the opponent's best answer decides.
   int best = -kInfinity;
-  for (const move& m : eng->get_all_legal_moves(&gh)) {
+  for (const move& m : eng->get_all_legal_moves()) {
     eng->perform_move(m);
     const int score = -negamax(depth - 1, ply + 1);
     eng->undo_move();

@@ -101,6 +101,19 @@ class engine {
    * @returns A copy of the current game state
    */
   game_history get_current_gamestate();
+  /**
+   * The current game state without a copy (get_current_gamestate() copies
+   * about 200 bytes, which counts in a search). The reference stays valid
+   * until this position is undone; perform_move() and undo_move() of later
+   * moves do not move it.
+   */
+  const game_history& current_state() const { return *gh; }
+  /**
+   * All legal moves of the current position, from the cache that
+   * perform_move() fills anyway. A copy: the cache changes with the next
+   * move, so a caller may play moves while going through the list.
+   */
+  std::vector<move> get_all_legal_moves();
 
  private:
   /** Fills legal_moves for the current position if it is empty. */

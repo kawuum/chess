@@ -44,8 +44,8 @@ alphabeta_ai::alphabeta_ai(engine* e, std::string name, uint32_t seed,
       sort_moves_(sort_moves),
       rng_(seed) {}
 
-std::vector<move> alphabeta_ai::moves_in_search_order(game_history& gh) {
-  std::vector<move> moves = eng->get_all_legal_moves(&gh);
+std::vector<move> alphabeta_ai::moves_in_search_order(const game_history& gh) {
+  std::vector<move> moves = eng->get_all_legal_moves();
   if (sort_moves_) {
     // stable_sort: moves with the same priority keep their order.
     std::stable_sort(moves.begin(), moves.end(),
@@ -59,7 +59,7 @@ std::vector<move> alphabeta_ai::moves_in_search_order(game_history& gh) {
 
 move alphabeta_ai::next_move() {
   positions_ = 0;
-  game_history gh = eng->get_current_gamestate();
+  const game_history& gh = eng->current_state();
   std::vector<move> best;
   int best_score = -kInfinity;
 
@@ -88,7 +88,7 @@ move alphabeta_ai::next_move() {
 
 int alphabeta_ai::alphabeta(int depth, int ply, int alpha, int beta) {
   ++positions_;
-  game_history gh = eng->get_current_gamestate();
+  const game_history& gh = eng->current_state();
 
   // The game is over in this position (see minimax_ai).
   if (gh.result == DRAW) return 0;

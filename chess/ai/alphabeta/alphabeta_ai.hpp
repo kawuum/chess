@@ -77,7 +77,7 @@ class alphabeta_ai : public ai_template {
 
   // The legal moves, the most promising first (see move_priority() in the
   // .cpp): good moves early make the cutoffs come early.
-  std::vector<move> moves_in_search_order(game_history& gh);
+  std::vector<move> moves_in_search_order(const game_history& gh);
 
   int depth_;
   bool sort_moves_;

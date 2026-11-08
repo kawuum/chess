@@ -47,11 +47,10 @@ move naive_ai::next_move() {
 }
 
 std::vector<move> naive_ai::best_moves(piece_color me) {
-  game_history gh = eng->get_current_gamestate();
   std::vector<move> best;
   int best_rating = std::numeric_limits<int>::min();
 
-  for (const move& m : eng->get_all_legal_moves(&gh)) {
+  for (const move& m : eng->get_all_legal_moves()) {
     int rating = rate_move(m, me);
     if (rating > best_rating) {
       // A new best rating: forget the moves found so far.
@@ -68,7 +67,7 @@ int naive_ai::rate_move(const move& m, piece_color me) {
   eng->perform_move(m);
 
   int rating;
-  game_result result = eng->get_current_gamestate().result;
+  game_result result = eng->current_state().result;
   if (result == win_for(me)) {
     rating = kWinRating;  // checkmate
   } else if (result == DRAW) {
