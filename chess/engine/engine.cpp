@@ -3,8 +3,6 @@
 #include <assert.h>
 
 #include <algorithm>
-#include <cctype>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -17,122 +15,293 @@ namespace {
 const char* const kStartFen =
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-// Maps a FEN piece letter (KQRBNP / kqrbnp) to a piece.
-piece piece_from_fen_char(char c) {
-  piece_color color = std::isupper(static_cast<unsigned char>(c))
-                          ? piece_color::WHITE
-                          : piece_color::BLACK;
-  switch (std::tolower(static_cast<unsigned char>(c))) {
-    case 'k':
-      return piece(KING, color);
-    case 'q':
-      return piece(QUEEN, color);
-    case 'r':
-      return piece(ROOK, color);
-    case 'b':
-      return piece(BISHOP, color);
-    case 'n':
-      return piece(KNIGHT, color);
-    case 'p':
-      return piece(PAWN, color);
-  }
-  throw std::invalid_argument(std::string("FEN: unknown piece '") + c + "'");
+bool is_space(char c) {
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
-}  // namespace
-
-void engine::new_game() { new_game(kStartFen); }
-
-void engine::new_game(std::string fen) {
-  // A FEN string has six fields separated by spaces, e.g. for the start
-  // position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-  std::istringstream in(fen);
-  std::string placement, side, castling, ep;
-  int halfmove_clock = 0, fullmove = 1;
-  if (!(in >> placement >> side >> castling >> ep)) {
-    throw std::invalid_argument("FEN: needs at least 4 fields: " + fen);
+// Splits text at spaces into fields. Returns how many fields there are; at
+// most 6 are stored, more are only counted (7 means "too many").
+int split_fields(std::string_view text, std::string_view (&fields)[6]) {
+  int count = 0;
+  size_t i = 0;
+  while (true) {
+    while (i < text.size() && is_space(text[i])) ++i;
+    if (i == text.size()) return count;
+    if (count == 6) return 7;
+    size_t end = i;
+    while (end < text.size() && !is_space(text[end])) ++end;
+    fields[count++] = text.substr(i, end - i);
+    i = end;
   }
-  in >> halfmove_clock >> fullmove;  // optional, defaults stay if missing
+}
 
-  auto state = std::make_shared<game_history>();
+// Reads a number of 1 to 9 decimal digits (no sign), so it fits in an int.
+bool read_number(std::string_view text, int& value) {
+  if (text.empty() || text.size() > 9) return false;
+  value = 0;
+  for (char c : text) {
+    if (c < '0' || c > '9') return false;
+    value = value * 10 + (c - '0');
+  }
+  return true;
+}
 
-  // 1. Piece placement: rank 8 first, files a to h, digits = empty squares.
+// Maps a FEN piece letter (KQRBNP / kqrbnp) to a piece; false for any other
+// character.
+bool read_piece(char c, piece& result) {
+  const bool white = c >= 'A' && c <= 'Z';
+  const piece_color color = white ? piece_color::WHITE : piece_color::BLACK;
+  switch (white ? static_cast<char>(c - 'A' + 'a') : c) {
+    case 'k':
+      result = piece(KING, color);
+      return true;
+    case 'q':
+      result = piece(QUEEN, color);
+      return true;
+    case 'r':
+      result = piece(ROOK, color);
+      return true;
+    case 'b':
+      result = piece(BISHOP, color);
+      return true;
+    case 'n':
+      result = piece(KNIGHT, color);
+      return true;
+    case 'p':
+      result = piece(PAWN, color);
+      return true;
+  }
+  return false;
+}
+
+// Field 1, the pieces: rank 8 first, files a to h, digits = empty squares.
+bool read_placement(std::string_view text, board& b) {
   int x = 0, y = 7;
-  for (char c : placement) {
+  for (char c : text) {
+    piece p;
     if (c == '/') {
-      if (x != 8) throw std::invalid_argument("FEN: bad rank in " + fen);
+      if (x != 8 || y == 0) return false;
       x = 0;
       --y;
     } else if (c >= '1' && c <= '8') {
       x += c - '0';
-    } else {
-      if (x > 7 || y < 0) throw std::invalid_argument("FEN: too many squares");
-      state->curr_board.add_piece(piece_from_fen_char(c), x, y);
+      if (x > 8) return false;
+    } else if (x < 8 && read_piece(c, p)) {
+      b.add_piece(p, x, y);
       ++x;
+    } else {
+      return false;
     }
   }
-  if (y != 0 || x != 8) {
-    throw std::invalid_argument("FEN: placement must have 8 ranks: " + fen);
-  }
+  return y == 0 && x == 8;
+}
 
-  // 2. Side to move.
-  if (side != "w" && side != "b") {
-    throw std::invalid_argument("FEN: side to move must be w or b");
-  }
-  state->to_move = side == "w" ? piece_color::WHITE : piece_color::BLACK;
-
-  // 3. Castling rights: K/Q for white, k/q for black, "-" for none.
-  int rights[2] = {NONE, NONE};
-  for (char c : castling) {
+// Field 3, castling rights: "-" or letters from KQkq.
+bool read_castling(std::string_view text, castling_rights (&rights)[2]) {
+  if (text == "-") return true;
+  int r[2] = {NONE, NONE};
+  for (char c : text) {
     switch (c) {
       case 'K':
-        rights[(int)piece_color::WHITE] |= SHORT;
+        r[(int)piece_color::WHITE] |= SHORT;
         break;
       case 'Q':
-        rights[(int)piece_color::WHITE] |= LONG;
+        r[(int)piece_color::WHITE] |= LONG;
         break;
       case 'k':
-        rights[(int)piece_color::BLACK] |= SHORT;
+        r[(int)piece_color::BLACK] |= SHORT;
         break;
       case 'q':
-        rights[(int)piece_color::BLACK] |= LONG;
-        break;
-      case '-':
+        r[(int)piece_color::BLACK] |= LONG;
         break;
       default:
-        throw std::invalid_argument("FEN: bad castling field " + castling);
+        return false;
     }
   }
-  state->castlingrights[0] = static_cast<castling_rights>(rights[0]);
-  state->castlingrights[1] = static_cast<castling_rights>(rights[1]);
+  rights[0] = static_cast<castling_rights>(r[0]);
+  rights[1] = static_cast<castling_rights>(r[1]);
+  return true;
+}
 
-  // 4. En passant target square, e.g. "e3". (0, 0) means none.
-  if (ep != "-") {
+bool has_piece(const board& b, int x, int y, piece_type type,
+               piece_color color) {
+  const piece p = b.get_piece(x, y);
+  return p.is_valid() && p.get_piece_type() == type &&
+         p.get_piece_color() == color;
+}
+
+// The position checks after the syntax: things that cannot happen in a game
+// and that the move generator relies on.
+fen_error check_position(game_history& state) {
+  board& b = state.curr_board;
+  int kings[2] = {0, 0};
+  int king_x[2] = {0, 0}, king_y[2] = {0, 0};
+  bool pawn_on_back_rank = false;
+  for (int y = 0; y < 8; ++y) {
+    for (int x = 0; x < 8; ++x) {
+      const piece p = b.get_piece(x, y);
+      if (!p.is_valid()) continue;
+      const int color = static_cast<int>(p.get_piece_color());
+      if (p.get_piece_type() == KING) {
+        ++kings[color];
+        king_x[color] = x;
+        king_y[color] = y;
+      } else if (p.get_piece_type() == PAWN && (y == 0 || y == 7)) {
+        pawn_on_back_rank = true;
+      }
+    }
+  }
+  if (kings[0] != 1 || kings[1] != 1) return fen_error::KINGS;
+  if (pawn_on_back_rank) return fen_error::PAWN_ON_BACK_RANK;
+
+  // A castling right needs the king on e1/e8 and the rook in its corner.
+  for (piece_color color : {piece_color::WHITE, piece_color::BLACK}) {
+    const int rights = state.castlingrights[static_cast<int>(color)];
+    const int y = color == piece_color::WHITE ? 0 : 7;
+    if (rights != NONE && !has_piece(b, 4, y, KING, color)) {
+      return fen_error::CASTLING_PIECES;
+    }
+    if ((rights & SHORT) && !has_piece(b, 7, y, ROOK, color)) {
+      return fen_error::CASTLING_PIECES;
+    }
+    if ((rights & LONG) && !has_piece(b, 0, y, ROOK, color)) {
+      return fen_error::CASTLING_PIECES;
+    }
+  }
+
+  // An en passant square lies behind a pawn of the side that just moved,
+  // which came from the square in front of it: both squares are empty.
+  const int ep_x = std::get<0>(state.ep_square);
+  const int ep_y = std::get<1>(state.ep_square);
+  if (ep_x != 0 || ep_y != 0) {
+    const bool white_to_move = state.to_move == piece_color::WHITE;
+    const piece_color moved =
+        white_to_move ? piece_color::BLACK : piece_color::WHITE;
+    const int step = white_to_move ? -1 : 1;  // from ep square to the pawn
+    if (ep_y != (white_to_move ? 5 : 2) || b.get_piece(ep_x, ep_y).is_valid() ||
+        b.get_piece(ep_x, ep_y - step).is_valid() ||
+        !has_piece(b, ep_x, ep_y + step, PAWN, moved)) {
+      return fen_error::EN_PASSANT;
+    }
+  }
+
+  // The side that just moved must not have left its king in check.
+  const int waiting = static_cast<int>(state.to_move == piece_color::WHITE
+                                           ? piece_color::BLACK
+                                           : piece_color::WHITE);
+  if (move_generation::is_square_attacked(b, king_x[waiting], king_y[waiting],
+                                          state.to_move)) {
+    return fen_error::OPPONENT_IN_CHECK;
+  }
+  return fen_error::NONE;
+}
+
+// Reads a FEN string into state, e.g. for the start position:
+// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+fen_error read_fen(std::string_view fen, game_history& state) {
+  std::string_view field[6];
+  const int fields = split_fields(fen, field);
+  if (fields < 4 || fields > 6) return fen_error::FIELDS;
+
+  if (!read_placement(field[0], state.curr_board)) return fen_error::PLACEMENT;
+
+  if (field[1] != "w" && field[1] != "b") return fen_error::SIDE_TO_MOVE;
+  state.to_move = field[1] == "w" ? piece_color::WHITE : piece_color::BLACK;
+
+  if (!read_castling(field[2], state.castlingrights)) {
+    return fen_error::CASTLING;
+  }
+
+  // (0, 0) means no en passant square.
+  if (field[3] != "-") {
+    const std::string_view ep = field[3];
     if (ep.size() != 2 || ep[0] < 'a' || ep[0] > 'h' || ep[1] < '1' ||
         ep[1] > '8') {
-      throw std::invalid_argument("FEN: bad en passant square " + ep);
+      return fen_error::EN_PASSANT;
     }
-    state->ep_square = std::make_tuple(ep[0] - 'a', ep[1] - '1');
+    state.ep_square = std::make_tuple(ep[0] - 'a', ep[1] - '1');
   }
 
-  // 5. Half moves since the last capture or pawn move (50-move rule). At 100
+  // Half moves since the last capture or pawn move (50-move rule). At 100
   // the game is a draw, so larger numbers are stored as 255.
-  if (halfmove_clock < 0) {
-    throw std::invalid_argument("FEN: negative half move clock in " + fen);
+  int halfmove_clock = 0;
+  if (fields >= 5 && !read_number(field[4], halfmove_clock)) {
+    return fen_error::HALFMOVE_CLOCK;
   }
-  state->halfmove_clock = static_cast<uint8_t>(std::min(halfmove_clock, 255));
+  state.halfmove_clock = static_cast<uint8_t>(std::min(halfmove_clock, 255));
 
-  // 6. The engine counts half moves from the start of the game.
-  state->num_halfmoves =
-      (fullmove - 1) * 2 + (state->to_move == piece_color::BLACK ? 1 : 0);
+  // The engine counts half moves from the start of the game.
+  int fullmove = 1;
+  if (fields == 6 && (!read_number(field[5], fullmove) || fullmove < 1 ||
+                      fullmove > engine::kMaxFullmoveNumber)) {
+    return fen_error::FULLMOVE_NUMBER;
+  }
+  state.num_halfmoves =
+      (fullmove - 1) * 2 + (state.to_move == piece_color::BLACK ? 1 : 0);
 
-  this->gh = state;
-  this->legal_moves_history.clear();
+  return check_position(state);
+}
+
+}  // namespace
+
+const char* fen_error_message(fen_error error) {
+  switch (error) {
+    case fen_error::NONE:
+      return "FEN: accepted";
+    case fen_error::FIELDS:
+      return "FEN: needs 4 to 6 fields separated by spaces";
+    case fen_error::PLACEMENT:
+      return "FEN: the pieces must be 8 ranks of 8 squares (letters KQRBNP, "
+             "kqrbnp, digits for empty squares)";
+    case fen_error::SIDE_TO_MOVE:
+      return "FEN: the side to move must be w or b";
+    case fen_error::CASTLING:
+      return "FEN: castling rights must be - or letters from KQkq";
+    case fen_error::EN_PASSANT:
+      return "FEN: the en passant square must be - or the square behind a "
+             "pawn that just moved two squares";
+    case fen_error::HALFMOVE_CLOCK:
+      return "FEN: the half move clock must be a number of 0 or more";
+    case fen_error::FULLMOVE_NUMBER:
+      return "FEN: the move number must be a number from 1 to 1000000";
+    case fen_error::KINGS:
+      return "FEN: each side needs exactly one king";
+    case fen_error::PAWN_ON_BACK_RANK:
+      return "FEN: no pawn may stand on rank 1 or 8";
+    case fen_error::CASTLING_PIECES:
+      return "FEN: a castling right needs king and rook on their start "
+             "squares";
+    case fen_error::OPPONENT_IN_CHECK:
+      return "FEN: the side that is not to move must not be in check";
+  }
+  return "FEN: unknown error";
+}
+
+fen_error engine::try_new_game(std::string_view fen) {
+  auto state = std::make_shared<game_history>();
+  const fen_error error = read_fen(fen, *state);
+  if (error != fen_error::NONE) return error;  // the current game goes on
+
   // Generate the legal moves right away: this also sets is_check and result
   // (checkmate or stalemate) for the new position.
   move_generation mg;
-  this->legal_moves = mg.generate_all_moves(this->gh.get());
+  std::vector<move> moves = mg.generate_all_moves(state.get());
+  // Only now, with everything ready, replace the current game.
+  this->gh = std::move(state);
+  this->legal_moves = std::move(moves);
+  this->legal_moves_history.clear();
   apply_draw_rules();
+  return fen_error::NONE;
+}
+
+void engine::new_game() { new_game(kStartFen); }
+
+void engine::new_game(std::string fen) {
+  const fen_error error = try_new_game(fen);
+  if (error != fen_error::NONE) {
+    throw std::invalid_argument(std::string(fen_error_message(error)) + ": \"" +
+                                fen + "\"");
+  }
 }
 
 void engine::apply_draw_rules() {

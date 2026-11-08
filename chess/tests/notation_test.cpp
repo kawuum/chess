@@ -65,8 +65,9 @@ TEST(Notation, OnlyOnePieceNoDisambiguation) {
 }
 
 TEST(Notation, Promotion) {
-  const char* fen = "3r1k2/4P3/8/8/8/8/8/4K3 w - - 0 1";
-  EXPECT_EQ(san(fen, "e7e8q"), "e8=Q+");   // the queen checks the king f8
+  // (King g8, not f8: the pawn on e7 would give check to f8 already.)
+  const char* fen = "3r2k1/4P3/8/8/8/8/8/4K3 w - - 0 1";
+  EXPECT_EQ(san(fen, "e7e8q"), "e8=Q+");   // the queen checks the king g8
   EXPECT_EQ(san(fen, "e7d8n"), "exd8=N");  // the knight does not
 }
 

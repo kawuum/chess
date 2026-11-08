@@ -1,6 +1,9 @@
 // Tests for engine::new_game(fen): parsing of all FEN fields, error handling
 // and the game state of loaded positions.
+#include <set>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "test_helpers.hpp"
 
@@ -85,6 +88,106 @@ TEST(Fen, InvalidInputThrows) {
                std::invalid_argument);
   EXPECT_THROW(e.new_game("4k3/8/8/8/8/8/8/4K3 w - z9 0 1"),
                std::invalid_argument);
+}
+
+struct Rejected {
+  const char* fen;
+  fen_error error;
+};
+
+const Rejected kRejected[] = {
+    {"", fen_error::FIELDS},
+    {"nonsense", fen_error::FIELDS},
+    {"4k3/8/8/8/8/8/8/4K3 w - - 0 1 extra", fen_error::FIELDS},
+    {"8/8/8/8/8/8/4K3 w - - 0 1", fen_error::PLACEMENT},      // 7 ranks
+    {"4k4/8/8/8/8/8/8/4K3 w - - 0 1", fen_error::PLACEMENT},  // 9 squares
+    {"4k3/8/8/8/8/8/8/4K2 w - - 0 1", fen_error::PLACEMENT},  // 7 squares
+    {"4x3/8/8/8/8/8/8/4K3 w - - 0 1", fen_error::PLACEMENT},
+    {"4k3/8/8/8/8/8/8/4K3 x - - 0 1", fen_error::SIDE_TO_MOVE},
+    {"4k3/8/8/8/8/8/8/4K3 w KX - 0 1", fen_error::CASTLING},
+    {"4k3/8/8/8/8/8/8/4K3 w - z9 0 1", fen_error::EN_PASSANT},
+    {"4k3/8/8/8/8/8/8/4K3 w - e6 0 1", fen_error::EN_PASSANT},  // no pawn
+    // e3 is behind a white pawn, but White is to move: Black moved last.
+    {"4k3/8/8/8/4P3/8/8/4K3 w - e3 0 1", fen_error::EN_PASSANT},
+    // e6 must be empty: the pawn passed it.
+    {"4k3/8/4n3/4p3/8/8/8/4K3 w - e6 0 1", fen_error::EN_PASSANT},
+    {"4k3/8/8/8/8/8/8/4K3 w - - -1 1", fen_error::HALFMOVE_CLOCK},
+    {"4k3/8/8/8/8/8/8/4K3 w - - x 1", fen_error::HALFMOVE_CLOCK},
+    {"4k3/8/8/8/8/8/8/4K3 w - - 0 0", fen_error::FULLMOVE_NUMBER},
+    {"4k3/8/8/8/8/8/8/4K3 w - - 0 -3", fen_error::FULLMOVE_NUMBER},
+    {"4k3/8/8/8/8/8/8/4K3 w - - 0 99999999999", fen_error::FULLMOVE_NUMBER},
+    {"4k3/8/8/8/8/8/8/8 w - - 0 1", fen_error::KINGS},
+    {"4k3/8/8/8/8/8/8/3KK3 w - - 0 1", fen_error::KINGS},
+    // Before the check, a pawn on rank 8 made the move generator read
+    // outside the board.
+    {"P3k3/8/8/8/8/8/8/4K3 w - - 0 1", fen_error::PAWN_ON_BACK_RANK},
+    {"4k3/8/8/8/8/8/8/p3K3 b - - 0 1", fen_error::PAWN_ON_BACK_RANK},
+    // Castling rights without rook or king in place made the engine use
+    // square 8 or 255.
+    {"4k3/8/8/8/8/8/8/4K2R w Q - 0 1", fen_error::CASTLING_PIECES},
+    {"4k3/8/8/8/8/8/8/R2K3R w K - 0 1", fen_error::CASTLING_PIECES},
+    {"r3k3/8/8/8/8/8/8/4K3 w k - 0 1", fen_error::CASTLING_PIECES},
+    // Black to move, but the white king is attacked by the rook.
+    {"4k3/8/8/8/8/8/8/4K2r b - - 0 1", fen_error::OPPONENT_IN_CHECK},
+    {"8/8/8/8/8/8/3k4/4K3 w - - 0 1", fen_error::OPPONENT_IN_CHECK},  // kings
+};
+
+TEST(Fen, InvalidInputIsRejectedWithItsReason) {
+  for (const Rejected& r : kRejected) {
+    engine e;
+    EXPECT_EQ(e.try_new_game(r.fen), r.error) << "\"" << r.fen << "\"";
+  }
+}
+
+TEST(Fen, RejectedFenLeavesTheGameUnchanged) {
+  for (const Rejected& r : kRejected) {
+    engine e;
+    e.new_game();
+    play(e, "e2e4");
+    const std::vector<std::string> moves_before = legal_uci_moves(e);
+    EXPECT_NE(e.try_new_game(r.fen), fen_error::NONE) << r.fen;
+    EXPECT_EQ(e.get_current_gamestate().num_halfmoves, 1) << r.fen;
+    EXPECT_EQ(e.get_color_to_move(), piece_color::BLACK) << r.fen;
+    EXPECT_EQ(legal_uci_moves(e), moves_before) << r.fen;
+    e.undo_move();  // the game played before is still there
+    EXPECT_EQ(legal_uci_moves(e).size(), 20u) << r.fen;
+  }
+}
+
+TEST(Fen, ThrowingVersionNamesTheReason) {
+  engine e;
+  try {
+    e.new_game("P3k3/8/8/8/8/8/8/4K3 w - - 0 1");
+    ADD_FAILURE() << "no exception";
+  } catch (const std::invalid_argument& ex) {
+    EXPECT_NE(std::string(ex.what()).find("rank 1 or 8"), std::string::npos)
+        << ex.what();
+  }
+}
+
+TEST(Fen, AcceptsValidSpecialCases) {
+  const char* const valid[] = {
+      "  rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1  ",
+      "4k3/8/8/8/4P3/8/8/4K3 b - e3 0 1",      // after e2e4
+      "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2",     // after d7d5
+      "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 8",  // all castling rights
+      "4k3/8/8/8/8/8/8/4K3 w - - 300 80",      // clock above 100
+      "4k3/8/8/8/8/8/8/4K3 w - -",             // counters missing
+      "4k3/8/8/8/8/8/8/4K3 w - - 0 1000000",   // kMaxFullmoveNumber
+  };
+  for (const char* fen : valid) {
+    engine e;
+    EXPECT_EQ(e.try_new_game(fen), fen_error::NONE) << fen;
+  }
+}
+
+TEST(Fen, ErrorMessagesAreDistinct) {
+  std::set<std::string> messages;
+  for (int i = 0; i <= static_cast<int>(fen_error::OPPONENT_IN_CHECK); ++i) {
+    messages.insert(fen_error_message(static_cast<fen_error>(i)));
+  }
+  EXPECT_EQ(messages.size(),
+            static_cast<size_t>(fen_error::OPPONENT_IN_CHECK) + 1);
 }
 
 TEST(Fen, LoadedCheckmateIsGameOver) {

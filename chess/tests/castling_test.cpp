@@ -36,11 +36,12 @@ TEST(Castling, NotAllowedThroughAttackedSquare) {
   EXPECT_FALSE(has_move(e, "e1g1"));
 }
 
-TEST(Castling, NotAllowedWhenRookIsMissing) {
-  // Inconsistent FEN: right K but no rook on h1.
+TEST(Castling, RightWithoutRookIsRejected) {
+  // Inconsistent FEN: right K but no rook on h1. Before the FEN check the
+  // engine loaded it (and only the move generator kept it from castling).
   engine e;
-  e.new_game("4k3/8/8/8/8/8/8/4K3 w K - 0 1");
-  EXPECT_FALSE(has_move(e, "e1g1"));
+  EXPECT_EQ(e.try_new_game("4k3/8/8/8/8/8/8/4K3 w K - 0 1"),
+            fen_error::CASTLING_PIECES);
 }
 
 TEST(Castling, MovesKingAndRook) {

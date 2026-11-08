@@ -1,4 +1,7 @@
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "../datastructures/board.hpp"
@@ -9,8 +12,30 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
+/** Why engine::try_new_game() rejected a FEN string. */
+enum class fen_error : uint8_t {
+  NONE,               // accepted
+  FIELDS,             // not 4 to 6 fields separated by spaces
+  PLACEMENT,          // not 8 ranks of 8 squares, or an unknown letter
+  SIDE_TO_MOVE,       // not "w" or "b"
+  CASTLING,           // not "-" or a combination of K, Q, k, q
+  EN_PASSANT,         // not "-" or a square behind a pawn that just moved two
+  HALFMOVE_CLOCK,     // not a number >= 0
+  FULLMOVE_NUMBER,    // not a number from 1 to kMaxFullmoveNumber
+  KINGS,              // not exactly one king per color
+  PAWN_ON_BACK_RANK,  // a pawn on rank 1 or 8
+  CASTLING_PIECES,    // a castling right without king and rook in place
+  OPPONENT_IN_CHECK,  // the side that just moved left its king in check
+};
+
+/** A short English description of a fen_error, e.g. for a message box. */
+const char* fen_error_message(fen_error error);
+
 class engine {
  public:
+  /** Larger move numbers are rejected (they would overflow the counter). */
+  static constexpr int kMaxFullmoveNumber = 1000000;
+
   engine() {}
   /**
    * Resets game state to start a new standard chess game.
@@ -21,6 +46,18 @@ class engine {
    * @param fen The Forsyth-Edwards-Notation of the game that should be started.
    */
   void new_game(std::string fen);
+  /**
+   * Starts a new game from a FEN string if it describes a legal position.
+   * Checks the syntax of all fields and that the position can occur in a
+   * game: one king per color, no pawn on rank 1 or 8, castling rights only
+   * with king and rook on their squares, an en passant square only behind
+   * a pawn that just moved two squares, and the side that just moved not in
+   * check. Leading and trailing spaces are ignored, the two move counters
+   * are optional.
+   * @returns fen_error::NONE if the game was started. Otherwise the engine
+   * is unchanged: the current game goes on.
+   */
+  fen_error try_new_game(std::string_view fen);
   /**
    * Performs a move. Only the start and target square of m (and for
    * promotions the promotion piece) are used; the engine looks the move up in

@@ -111,7 +111,9 @@ TEST(Evaluation, OnlyTheFirstPieceOnALineCounts) {
 }
 
 TEST(Evaluation, KnightForkThreatensRookAndKing) {
-  board b = from_fen("r3k3/2N5/8/8/8/8/8/4K3 w - - 0 1");
+  // Black to move: with White to move, Black would have left its king in
+  // check, and the engine rejects that FEN.
+  board b = from_fen("r3k3/2N5/8/8/8/8/8/4K3 b - - 0 1");
   bit_matrix threatened = threatened_pieces(b, W);
   EXPECT_EQ(threatened.get_num_bits_set(), 2);
   EXPECT_TRUE(has(threatened, "a8"));
