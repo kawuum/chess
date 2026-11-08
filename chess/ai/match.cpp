@@ -59,6 +59,7 @@ match_stats play_match(
       ++stats.unfinished;
     } else {
       const bool white_won = record.result == WHITE_WIN;
+      ++(white_won ? stats.white_wins : stats.black_wins);
       if (white_won == first_is_white) {
         ++stats.first_wins;
       } else {

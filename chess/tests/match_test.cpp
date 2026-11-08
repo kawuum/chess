@@ -41,6 +41,8 @@ TEST(DeepMatch, NaiveAgainstNaiveExactNumbers) {
   EXPECT_EQ(s.games, 1452);
   EXPECT_EQ(s.first_wins, 120);   // White
   EXPECT_EQ(s.second_wins, 282);  // Black: moving second helps the naive AI
+  EXPECT_EQ(s.white_wins, 120);   // fixed colors: first AI = White
+  EXPECT_EQ(s.black_wins, 282);
   EXPECT_EQ(s.draws, 1050);
   EXPECT_EQ(s.draws_by[STALEMATE], 0);
   EXPECT_EQ(s.draws_by[THREEFOLD_REPETITION], 963);
@@ -77,6 +79,7 @@ TEST(Match, StatsAddUp) {
   match_stats s = play_match(random_ai_info(), random_ai_info(), settings);
   EXPECT_EQ(s.games, 20);
   EXPECT_EQ(s.first_wins + s.second_wins + s.draws + s.unfinished, 20);
+  EXPECT_EQ(s.white_wins + s.black_wins, s.first_wins + s.second_wins);
   int by_reason = 0;
   for (int count : s.draws_by) by_reason += count;
   EXPECT_EQ(by_reason, s.draws);

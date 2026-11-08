@@ -32,6 +32,8 @@ struct match_stats {
   int games = 0;
   int first_wins = 0;
   int second_wins = 0;
+  int white_wins = 0;  // the same wins, counted by color
+  int black_wins = 0;
   int draws = 0;
   int draws_by[5] = {};  // index: draw_reason (STALEMATE, ...)
   int unfinished = 0;    // stopped at the half move limit

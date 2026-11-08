@@ -51,6 +51,11 @@ target_link_libraries(chess_bench PRIVATE chess_engine)
 add_executable(chess_mem bench/chess_mem.cpp)
 target_link_libraries(chess_mem PRIVATE chess_engine)
 
+# Long run of all AIs against each other (crashes, strength, speed, memory),
+# see bench/chess_arena.cpp
+add_executable(chess_arena bench/chess_arena.cpp)
+target_link_libraries(chess_arena PRIVATE chess_engine)
+
 if(CHESS_BUILD_QT)
   find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
