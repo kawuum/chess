@@ -44,6 +44,10 @@ class minimax_ai : public ai_template {
 
   /** How many positions the last next_move() looked at. */
   long long positions_searched() const { return positions_; }
+  /** Score of the best move of the last next_move(), for the AI's side. */
+  int best_score() const { return best_score_; }
+  /** All equally best moves of the last next_move() (one was played). */
+  const std::vector<move>& best_moves() const { return best_moves_; }
 
  private:
   // The score of the engine's current position for the side to move,
@@ -54,4 +58,6 @@ class minimax_ai : public ai_template {
   int depth_;
   std::mt19937 rng_;
   long long positions_ = 0;
+  int best_score_ = 0;
+  std::vector<move> best_moves_;
 };

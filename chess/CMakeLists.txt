@@ -38,6 +38,7 @@ add_library(chess_engine STATIC
   ai/random/random_ai.cpp
   ai/naive/naive_ai.cpp
   ai/minimax/minimax_ai.cpp
+  ai/alphabeta/alphabeta_ai.cpp
   ai/ai_registry.cpp
   ai/match.cpp)
 target_include_directories(chess_engine PUBLIC datastructures)
@@ -96,6 +97,7 @@ if(CHESS_BUILD_TESTS)
   include(GoogleTest)
   add_executable(chess_tests
     tests/ai_registry_test.cpp
+    tests/alphabeta_test.cpp
     tests/attack_tables_test.cpp
     tests/bit_matrix_test.cpp
     tests/board_test.cpp

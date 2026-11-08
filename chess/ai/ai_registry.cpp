@@ -1,5 +1,6 @@
 #include "ai_registry.hpp"
 
+#include "alphabeta/alphabeta_ai.hpp"
 #include "minimax/minimax_ai.hpp"
 #include "naive/naive_ai.hpp"
 #include "random/random_ai.hpp"
@@ -23,6 +24,12 @@ const std::vector<ai_info>& available_ais() {
       {"Minimax AI",
        [](engine* e, uint32_t seed) {
          return std::make_unique<minimax_ai>(e, "Minimax AI", seed);
+       },
+       /*uses_random=*/true},
+      // Same idea with alpha-beta and move ordering: 4 half moves deep.
+      {"Alpha-Beta AI",
+       [](engine* e, uint32_t seed) {
+         return std::make_unique<alphabeta_ai>(e, "Alpha-Beta AI", seed);
        },
        /*uses_random=*/true},
   };

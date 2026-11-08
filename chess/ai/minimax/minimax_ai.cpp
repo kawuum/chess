@@ -30,6 +30,8 @@ move minimax_ai::next_move() {
       best.push_back(m);
     }
   }
+  best_score_ = best_score;
+  best_moves_ = best;
   if (best.empty()) return move{};  // no legal move: type is NO_MOVE
 
   std::uniform_int_distribution<size_t> pick(0, best.size() - 1);
