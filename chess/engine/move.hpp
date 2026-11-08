@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include <string>
+#include <type_traits>
 
 #include "../datastructures/piece.hpp"
 
@@ -38,6 +39,11 @@ struct move {
 
   bool operator!=(const move& other) const { return !(*this == other); }
 };
+
+// Moves are copied byte by byte (move lists, later fixed stacks for the
+// search and the Game Boy Advance): no member may need a copy constructor.
+static_assert(std::is_trivially_copyable<move>::value,
+              "move must stay trivially copyable");
 
 /** True for promotions (with or without capture). */
 inline bool is_promotion(const move& m) {

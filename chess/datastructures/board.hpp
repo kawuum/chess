@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include <type_traits>
+
 #include "bit_matrix.hpp"
 #include "piece.hpp"
 
@@ -239,5 +241,12 @@ class board {
   bit_matrix black_pawns;
   bit_matrix black_rooks;
 };
+
+// A board is copied byte by byte (game states, later undo stacks and the
+// Game Boy Advance): no member may need a copy constructor.
+static_assert(std::is_trivially_copyable<board>::value,
+              "board must stay trivially copyable");
+static_assert(std::is_trivially_copyable<piece>::value,
+              "piece must stay trivially copyable");
 
 #endif  // CHESS_BOARD_HPP
