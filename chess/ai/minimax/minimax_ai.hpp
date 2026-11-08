@@ -27,10 +27,17 @@ class minimax_ai : public ai_template {
  public:
   static constexpr int kMateScore = 100000;
   static constexpr int kDefaultDepth = 3;
+  // Larger than any score, also a mate (same as alphabeta_ai). -kInfinity
+  // is best_score() when there is no legal move.
+  static constexpr int kInfinity = 1000000;
 
-  /** Seeds the random generator from std::random_device. */
-  explicit minimax_ai(engine* e, std::string name = "Minimax AI",
-                      int depth = kDefaultDepth);
+  /**
+   * Seeds the random generator from std::random_device and searches
+   * kDefaultDepth half moves. A depth is only accepted together with a
+   * seed (constructor below): an overload (name, int depth) would win
+   * over (name, uint32_t seed) for a plain number like 1.
+   */
+  explicit minimax_ai(engine* e, std::string name = "Minimax AI");
   /** Fixed seed: the same position always gives the same move (tests). */
   minimax_ai(engine* e, std::string name, uint32_t seed,
              int depth = kDefaultDepth);
@@ -42,6 +49,8 @@ class minimax_ai : public ai_template {
    */
   move next_move() override;
 
+  /** How many half moves the search looks ahead. */
+  int depth() const { return depth_; }
   /** How many positions the last next_move() looked at. */
   long long positions_searched() const { return positions_; }
   /** Score of the best move of the last next_move(), for the AI's side. */

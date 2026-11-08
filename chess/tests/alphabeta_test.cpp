@@ -80,6 +80,17 @@ TEST(AlphaBeta, MoveOrderingSavesPositions) {
       << sorted_total << " vs " << unsorted_total;
 }
 
+// A plain number as third argument is the seed, not the depth (see
+// Minimax.ThirdArgumentIsTheSeed).
+TEST(AlphaBeta, ThirdArgumentIsTheSeed) {
+  engine e;
+  e.new_game();
+  alphabeta_ai ai(&e, "alphabeta", 1);
+  EXPECT_EQ(ai.depth(), alphabeta_ai::kDefaultDepth);
+  alphabeta_ai deeper(&e, "alphabeta", 1, 2);
+  EXPECT_EQ(deeper.depth(), 2);
+}
+
 TEST(AlphaBeta, TakesMateInOne) {
   engine e;
   e.new_game("7k/8/6K1/8/8/8/8/5Q2 w - - 0 1");
@@ -122,6 +133,21 @@ TEST(AlphaBeta, NoMoveWhenGameIsOver) {
   e.new_game("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3");
   alphabeta_ai ai(&e, "alphabeta", 1);
   EXPECT_EQ(ai.next_move().type, NO_MOVE);
+  EXPECT_TRUE(ai.best_moves().empty());
+  // "No score": a value whose negation is safe (INT_MIN would overflow).
+  EXPECT_EQ(ai.best_score(), -alphabeta_ai::kInfinity);
+}
+
+TEST(AlphaBeta, DepthBelowOneSearchesOneHalfMove) {
+  // Depth 0 searched forever before: the search stops at depth == 0, and
+  // the first step down went to -1.
+  engine e;
+  e.new_game();
+  alphabeta_ai ai(&e, "alphabeta", 1, 0);
+  ASSERT_EQ(ai.depth(), 1);
+  EXPECT_NE(ai.next_move().type, NO_MOVE);
+  alphabeta_ai negative(&e, "alphabeta", 1, -5);
+  EXPECT_EQ(negative.depth(), 1);
 }
 
 // Strength: a few seconds in the release build, only with CHESS_SLOW_TESTS=1.

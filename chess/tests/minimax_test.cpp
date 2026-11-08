@@ -18,6 +18,18 @@ std::string best_move(const std::string& fen, uint32_t seed = 1) {
   return to_uci(ai.next_move());
 }
 
+// A plain number as third argument is the seed, not the depth: with an
+// overload (name, int depth) next to (name, uint32_t seed), the literal 1
+// chose the depth overload, and tests meant for depth 3 searched depth 1.
+TEST(Minimax, ThirdArgumentIsTheSeed) {
+  engine e;
+  e.new_game();
+  minimax_ai ai(&e, "minimax", 1);
+  EXPECT_EQ(ai.depth(), minimax_ai::kDefaultDepth);
+  minimax_ai deeper(&e, "minimax", 1, 2);
+  EXPECT_EQ(deeper.depth(), 2);
+}
+
 TEST(Minimax, TakesMateInOne) {
   // Several queen moves mate; Qf7 would be stalemate.
   for (uint32_t seed = 1; seed <= 3; ++seed) {
@@ -38,6 +50,10 @@ TEST(Minimax, FindsMateInTwo) {
   e.new_game("7k/8/8/8/8/8/1R6/R3K3 w - - 0 1");
   minimax_ai ai(&e, "minimax", 1);
   e.perform_move(ai.next_move());
+  // Only a search that sees the mate scores it as a mate in 3 half moves.
+  // (The rook move alone is also found by a shallow search: the piece-square
+  // table likes rooks on the 7th rank.)
+  EXPECT_EQ(ai.best_score(), minimax_ai::kMateScore - 3);
   ASSERT_EQ(e.get_current_gamestate().result, RUNNING);
   game_history gh = e.get_current_gamestate();
   const std::vector<move> replies = e.get_all_legal_moves(&gh);
@@ -105,6 +121,21 @@ TEST(Minimax, NoMoveWhenGameIsOver) {
   e.new_game("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3");
   minimax_ai ai(&e, "minimax", 1);
   EXPECT_EQ(ai.next_move().type, NO_MOVE);
+  EXPECT_TRUE(ai.best_moves().empty());
+  // "No score": a value whose negation is safe (INT_MIN would overflow).
+  EXPECT_EQ(ai.best_score(), -minimax_ai::kInfinity);
+}
+
+TEST(Minimax, DepthBelowOneSearchesOneHalfMove) {
+  // Depth 0 searched forever before: the search stops at depth == 0, and
+  // the first step down went to -1.
+  engine e;
+  e.new_game();
+  minimax_ai ai(&e, "minimax", 1, 0);
+  ASSERT_EQ(ai.depth(), 1);
+  EXPECT_NE(ai.next_move().type, NO_MOVE);
+  minimax_ai negative(&e, "minimax", 1, -5);
+  EXPECT_EQ(negative.depth(), 1);
 }
 
 // Strength: about 20 s in the release build, so only with CHESS_SLOW_TESTS=1.

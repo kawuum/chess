@@ -34,13 +34,13 @@ int move_priority(const move& m, const board& b) {
 
 }  // namespace
 
-alphabeta_ai::alphabeta_ai(engine* e, std::string name, int depth)
-    : alphabeta_ai(e, std::move(name), std::random_device{}(), depth) {}
+alphabeta_ai::alphabeta_ai(engine* e, std::string name)
+    : alphabeta_ai(e, std::move(name), std::random_device{}()) {}
 
 alphabeta_ai::alphabeta_ai(engine* e, std::string name, uint32_t seed,
                            int depth, bool sort_moves)
     : ai_template(e, std::move(name)),
-      depth_(depth),
+      depth_(std::max(depth, 1)),  // the search stops at depth 0
       sort_moves_(sort_moves),
       rng_(seed) {}
 

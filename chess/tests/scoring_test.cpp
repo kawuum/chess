@@ -43,6 +43,24 @@ TEST(Scoring, MaterialDecides) {
   EXPECT_LT(scoring::score(b, B), -800);
 }
 
+// The a-side and the h-side are worth the same: a table that prefers one
+// side pushes the search towards it for no chess reason. (The queen table,
+// taken from a common example, preferred the queenside on ranks 2 and 3.)
+TEST(Scoring, TablesAreSymmetricLeftToRight) {
+  for (piece_type type : {KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN}) {
+    for (piece_color color : {piece_color::WHITE, piece_color::BLACK}) {
+      const piece p(type, color);
+      for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 4; ++x) {
+          EXPECT_EQ(scoring::square_bonus(p, x, y),
+                    scoring::square_bonus(p, 7 - x, y))
+              << "type " << int(type) << " square " << x << "," << y;
+        }
+      }
+    }
+  }
+}
+
 TEST(Scoring, SquaresMatter) {
   const piece knight(KNIGHT, W), pawn(PAWN, W);
   EXPECT_GT(scoring::square_bonus(knight, 3, 3),   // d4: center

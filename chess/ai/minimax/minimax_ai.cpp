@@ -1,21 +1,23 @@
 #include "minimax_ai.hpp"
 
-#include <limits>
+#include <algorithm>
 #include <utility>
 
 #include "../../engine/scoring.hpp"
 
-minimax_ai::minimax_ai(engine* e, std::string name, int depth)
-    : minimax_ai(e, std::move(name), std::random_device{}(), depth) {}
+minimax_ai::minimax_ai(engine* e, std::string name)
+    : minimax_ai(e, std::move(name), std::random_device{}()) {}
 
 minimax_ai::minimax_ai(engine* e, std::string name, uint32_t seed, int depth)
-    : ai_template(e, std::move(name)), depth_(depth), rng_(seed) {}
+    : ai_template(e, std::move(name)),
+      depth_(std::max(depth, 1)),  // the search stops at depth 0
+      rng_(seed) {}
 
 move minimax_ai::next_move() {
   positions_ = 0;
   game_history gh = eng->get_current_gamestate();
   std::vector<move> best;
-  int best_score = std::numeric_limits<int>::min();
+  int best_score = -kInfinity;
 
   for (const move& m : eng->get_all_legal_moves(&gh)) {
     eng->perform_move(m);
@@ -54,7 +56,7 @@ int minimax_ai::negamax(int depth, int ply) {
   if (depth == 0) return scoring::score(gh.curr_board, gh.to_move);
 
   // Otherwise try every move; the opponent's best answer decides.
-  int best = std::numeric_limits<int>::min();
+  int best = -kInfinity;
   for (const move& m : eng->get_all_legal_moves(&gh)) {
     eng->perform_move(m);
     const int score = -negamax(depth - 1, ply + 1);

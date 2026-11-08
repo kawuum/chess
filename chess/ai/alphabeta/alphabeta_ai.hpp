@@ -33,10 +33,17 @@ class alphabeta_ai : public ai_template {
  public:
   static constexpr int kMateScore = 100000;  // same scale as minimax_ai
   static constexpr int kDefaultDepth = 4;
+  // Larger than any score, also a mate: the "no bound yet" value, and
+  // -kInfinity is best_score() when there is no legal move.
+  static constexpr int kInfinity = 1000000;
 
-  /** Seeds the random generator from std::random_device. */
-  explicit alphabeta_ai(engine* e, std::string name = "Alpha-Beta AI",
-                        int depth = kDefaultDepth);
+  /**
+   * Seeds the random generator from std::random_device and searches
+   * kDefaultDepth half moves. A depth is only accepted together with a
+   * seed (constructor below): an overload (name, int depth) would win
+   * over (name, uint32_t seed) for a plain number like 1.
+   */
+  explicit alphabeta_ai(engine* e, std::string name = "Alpha-Beta AI");
   /**
    * Fixed seed: the same position always gives the same move (tests).
    * sort_moves = false searches the moves in the generator's order (only
@@ -52,6 +59,8 @@ class alphabeta_ai : public ai_template {
    */
   move next_move() override;
 
+  /** How many half moves the search looks ahead. */
+  int depth() const { return depth_; }
   /** How many positions the last next_move() looked at. */
   long long positions_searched() const { return positions_; }
   /** Score of the best move of the last next_move(), for the AI's side. */
@@ -60,9 +69,6 @@ class alphabeta_ai : public ai_template {
   const std::vector<move>& best_moves() const { return best_moves_; }
 
  private:
-  // Larger than any score, also a mate: the "no bound yet" value.
-  static constexpr int kInfinity = 1000000;
-
   // The score of the engine's current position for the side to move,
   // looking depth half moves ahead, if it lies between alpha and beta.
   // Otherwise the result is only a bound: alpha if the true score is at
