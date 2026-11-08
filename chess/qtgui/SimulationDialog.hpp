@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <vector>
 
 #include "../ai/match.hpp"
 
@@ -29,7 +30,9 @@ class SimulationDialog : public QDialog {
   Q_OBJECT
 
  public:
-  explicit SimulationDialog(QWidget* parent = nullptr);
+  // ais: the AIs to choose from (tests can add their own).
+  explicit SimulationDialog(QWidget* parent = nullptr,
+                            std::vector<ai_info> ais = available_ais());
   // Stops a running simulation and waits for its thread.
   ~SimulationDialog() override;
 
@@ -86,9 +89,14 @@ class SimulationDialog : public QDialog {
   // The bar, the numbers and the draw reasons for these results.
   void showVisuals(const match_stats& stats);
   void showEnd(const match_stats& stats);
+  // The simulation thread ended with an exception (a bug, e.g. in an AI).
+  void showError(const QString& message);
   void setRunning(bool running);
   QString describeStats(const match_stats& stats) const;
 
+  // The thread keeps pointers into this list; it lives as long as the
+  // dialog, and the destructor waits for the thread.
+  const std::vector<ai_info> ais_;
   AiChooser first_;
   AiChooser second_;
   QSpinBox* games_;
@@ -111,4 +119,5 @@ class SimulationDialog : public QDialog {
   QString firstName_, secondName_;
   QString seedsText_;
   int plannedGames_ = 0;
+  match_stats lastStats_;  // the latest results shown
 };

@@ -16,7 +16,9 @@
 #include <QStringList>
 #include <QThread>
 #include <QVBoxLayout>
+#include <exception>
 #include <random>
+#include <utility>
 
 namespace {
 
@@ -67,7 +69,8 @@ class ResultBar : public QWidget {
   match_stats stats_;
 };
 
-SimulationDialog::SimulationDialog(QWidget* parent) : QDialog(parent) {
+SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
+    : QDialog(parent), ais_(std::move(ais)) {
   setWindowTitle("Simulate games");
   setMinimumWidth(640);
 
@@ -230,7 +233,7 @@ QGroupBox* SimulationDialog::createChooser(const QString& title,
   auto* box = new QGroupBox(title, this);
 
   chooser.ai = new QComboBox(box);
-  for (const ai_info& ai : available_ais()) {
+  for (const ai_info& ai : ais_) {
     chooser.ai->addItem(QString::fromStdString(ai.name));
   }
   chooser.ai->setObjectName(name + "Ai");
@@ -268,7 +271,7 @@ QGroupBox* SimulationDialog::createChooser(const QString& title,
 }
 
 const ai_info& SimulationDialog::selectedAi(const AiChooser& chooser) const {
-  return available_ais()[chooser.ai->currentIndex()];
+  return ais_[chooser.ai->currentIndex()];
 }
 
 void SimulationDialog::updateSeedRow(AiChooser& chooser) {
@@ -297,7 +300,7 @@ void SimulationDialog::start() {
   if (running_) return;
   if (thread_) thread_->wait();  // the last simulation has ended already
 
-  // Pointers into available_ais(): that list lives as long as the program.
+  // Pointers into ais_, which lives as long as the dialog.
   const ai_info* first = &selectedAi(first_);
   const ai_info* second = &selectedAi(second_);
   match_settings settings;
@@ -334,23 +337,36 @@ void SimulationDialog::start() {
   result_->setText("Running...");
   progressText_->setText(QString("0 / %1 games").arg(plannedGames_));
   clock_.start();
-  showVisuals(match_stats{});
+  lastStats_ = match_stats{};
+  showVisuals(lastStats_);
   cancel_ = false;
   setRunning(true);
 
   // Runs in the new thread. It only reads the AI list (which never changes)
   // and plays on engines of its own; everything for the widgets is queued
   // to the GUI thread.
+  // An exception must not leave this function: one that nobody catches
+  // ends the whole program. A bug in an AI (e.g. an illegal move) is shown
+  // in the dialog instead.
   auto simulation = [this, first, second, settings] {
-    match_stats stats = play_match(
-        *first, *second, settings, [this](const match_stats& so_far) {
-          QMetaObject::invokeMethod(
-              this, [this, so_far] { showProgress(so_far); },
-              Qt::QueuedConnection);
-          return !cancel_;  // false stops the match
-        });
-    QMetaObject::invokeMethod(
-        this, [this, stats] { showEnd(stats); }, Qt::QueuedConnection);
+    try {
+      match_stats stats = play_match(
+          *first, *second, settings, [this](const match_stats& so_far) {
+            QMetaObject::invokeMethod(
+                this, [this, so_far] { showProgress(so_far); },
+                Qt::QueuedConnection);
+            return !cancel_;  // false stops the match
+          });
+      QMetaObject::invokeMethod(
+          this, [this, stats] { showEnd(stats); }, Qt::QueuedConnection);
+    } catch (const std::exception& error) {
+      const QString message = QString::fromUtf8(error.what());
+      QMetaObject::invokeMethod(
+          this, [this, message] { showError(message); }, Qt::QueuedConnection);
+    } catch (...) {
+      QMetaObject::invokeMethod(
+          this, [this] { showError("unknown error"); }, Qt::QueuedConnection);
+    }
   };
   thread_.reset(QThread::create(simulation));
   thread_->start();
@@ -364,6 +380,7 @@ void SimulationDialog::closeEvent(QCloseEvent* event) {
 }
 
 void SimulationDialog::showProgress(const match_stats& stats) {
+  lastStats_ = stats;
   progress_->setValue(stats.games);
   progressText_->setText(
       QString("%1 / %2 games").arg(stats.games).arg(plannedGames_));
@@ -411,6 +428,17 @@ void SimulationDialog::showEnd(const match_stats& stats) {
                          .arg(plannedGames_) +
                      describeStats(stats));
   }
+  setRunning(false);
+  emit simulationEnded();
+}
+
+void SimulationDialog::showError(const QString& message) {
+  // The progress calls queued before the error have run already (queued
+  // calls keep their order), so lastStats_ holds the games played.
+  result_->setText(QString("Stopped by an error after %1 games: %2\n\n")
+                       .arg(lastStats_.games)
+                       .arg(message) +
+                   describeStats(lastStats_));
   setRunning(false);
   emit simulationEnded();
 }

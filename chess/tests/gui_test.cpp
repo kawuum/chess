@@ -15,7 +15,9 @@
 #include <QTableWidget>
 #include <QTest>
 #include <algorithm>
+#include <memory>
 #include <ostream>
+#include <vector>
 
 #include "../ai/ai_registry.hpp"
 #include "../qtgui/ChessBoardWidget.hpp"
@@ -444,7 +446,35 @@ TEST_F(Gui, RandomSeedIsShownAndRepeatsTheSimulation) {
   EXPECT_EQ(run(), first_run);
 }
 
-// White pawn on a7, one step before promotion.
+// An AI with a bug: it always plays a move that is not legal, so the engine
+// throws std::invalid_argument in the simulation thread.
+class IllegalMoveAi : public ai_template {
+ public:
+  explicit IllegalMoveAi(engine* e) : ai_template(e, "Broken AI") {}
+  move next_move() override { return move{}; }  // a1a1
+};
+
+TEST_F(Gui, SimulationReportsAnErrorInsteadOfCrashing) {
+  // Before, the exception left the thread's function, and an exception
+  // nobody catches ends the whole program (std::terminate).
+  std::vector<ai_info> ais = available_ais();
+  ais.push_back({"Broken AI", [](engine* e, uint32_t) {
+                   return std::make_unique<IllegalMoveAi>(e);
+                 }});
+  SimulationDialog dialog(nullptr, ais);
+  dialog.findChild<QComboBox*>("firstAi")->setCurrentText("Random AI");
+  dialog.findChild<QComboBox*>("secondAi")->setCurrentText("Broken AI");
+  dialog.findChild<QSpinBox*>("games")->setValue(5);
+  click_button(&dialog, "start");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog.isRunning(); }, 30000));
+  EXPECT_TRUE(dialog.resultText().contains("Stopped by an error"))
+      << dialog.resultText().toStdString();
+  EXPECT_TRUE(dialog.resultText().contains("illegal move"))
+      << dialog.resultText().toStdString();
+  // The dialog can start again.
+  EXPECT_TRUE(dialog.findChild<QPushButton*>("start")->isEnabled());
+}
+
 // The rook on h1 keeps enough material on the board: after a promotion to a
 // knight, king and knight against king would be a draw, and the "game over"
 // dialog would wait for a click forever.
