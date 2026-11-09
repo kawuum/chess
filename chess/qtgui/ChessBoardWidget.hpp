@@ -67,6 +67,9 @@ class ChessBoardWidget : public QWidget {
   // An AI plays the side to move; it may be waiting for a click.
   bool isAiToMove();
   bool isWaitingForClick() const { return waitingForClick_; }
+  // A timer for the next AI move is running (for tests: wait until it has
+  // run out instead of waiting a fixed time).
+  bool isAiMovePending() const { return aiMovePending_; }
   // Material of White minus material of Black, in pawns (e.g. +3).
   int materialBalance();
 

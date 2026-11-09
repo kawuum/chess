@@ -260,16 +260,17 @@ TEST_F(Gui, AiSpeedStartsWithWaitForClick) {
 TEST_F(Gui, AiVsAiWaitsForAClick) {
   random_ai_for_both();
   // Switching White to an AI first started the timer of a game against a
-  // human. It runs out during this wait, but must not make a move.
-  QTest::qWait(600);
+  // human. When it runs out, it must not make a move.
+  EXPECT_TRUE(board->isAiMovePending());
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !board->isAiMovePending(); }, 5000));
   EXPECT_EQ(status(),
             "White to move (Random AI) - click the board for the next move");
   click(4, 4);  // any square
   EXPECT_EQ(status(),
             "Black to move (Random AI) - click the board for the next move");
-  QTest::qWait(600);  // still nothing happens without a click
-  EXPECT_EQ(status(),
-            "Black to move (Random AI) - click the board for the next move");
+  // No timer runs: without a click nothing happens (no fixed wait needed).
+  EXPECT_FALSE(board->isAiMovePending());
+  EXPECT_TRUE(board->isWaitingForClick());
 }
 
 TEST_F(Gui, AiVsAiWithDelayPlaysByItself) {
@@ -392,9 +393,13 @@ TEST_F(Gui, DialogCanBeDeletedWhileSimulating) {
   SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 100000);
   ASSERT_NE(dialog, nullptr);
   click_button(dialog, "start");
-  QTest::qWait(50);
+  // Wait for the first result from the thread: it is playing for sure.
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] { return !dialog->resultText().startsWith("Running"); }, 5000));
   ASSERT_TRUE(dialog->isRunning());
   delete dialog;
+  // A fixed wait on purpose: a thread that wrongly went on would get the
+  // time to touch the deleted dialog (nothing to wait for if all is well).
   QTest::qWait(200);
   EXPECT_EQ(window.findChild<SimulationDialog*>(), nullptr);
 }
