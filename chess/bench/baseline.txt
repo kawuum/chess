@@ -1,7 +1,7 @@
-# chess_bench baseline, 2026-11-05: completed perft runs per 8 s
-start 289
-kiwipete 598
-position3 84
-position4 141
-position5 1085
-position6 711
+# chess_bench baseline, 2026-11-09: completed runs per 8 s
+start 264
+kiwipete 570
+position3 71
+position4 134
+position5 1003
+position6 653
