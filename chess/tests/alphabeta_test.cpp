@@ -2,6 +2,8 @@
 // positions, and the positions where looking ahead decides.
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -59,6 +61,105 @@ TEST(AlphaBeta, SameResultAsMinimaxWithFewerPositions) {
           << c.fen;
     }
     EXPECT_EQ(to_uci(m3), to_uci(m1)) << c.fen;
+  }
+}
+
+// The same comparison in positions from random games. The same random
+// moves are played on three engines, so all three know the same game (a
+// repetition in the search counts the same everywhere). Every 4th position
+// is searched 3 half moves deep, the others 2.
+void compare_in_random_positions(int positions) {
+  int compared = 0;
+  for (uint32_t game = 1; compared < positions; ++game) {
+    engine e1, e2, e3;
+    for (engine* e : {&e1, &e2, &e3}) e->new_game();
+    std::mt19937 rng(game);
+    for (int ply = 0; ply < 80 && compared < positions; ++ply) {
+      const std::vector<move> moves = e1.get_all_legal_moves();
+      if (moves.empty()) break;  // the game is over
+      const move m = moves[rng() % moves.size()];
+      for (engine* e : {&e1, &e2, &e3}) e->perform_move(m);
+      if (ply % 8 != 7 || e1.current_state().result != RUNNING) continue;
+
+      const int depth = compared % 4 == 0 ? 3 : 2;
+      const uint32_t seed = static_cast<uint32_t>(compared);
+      minimax_ai minimax(&e1, "minimax", seed, depth);
+      alphabeta_ai sorted(&e2, "sorted", seed, depth);
+      alphabeta_ai unsorted(&e3, "unsorted", seed, depth, false);
+      const move m1 = minimax.next_move();
+      sorted.next_move();
+      const move m3 = unsorted.next_move();
+      const std::string where = "game " + std::to_string(game) + " ply " +
+                                std::to_string(ply) + " depth " +
+                                std::to_string(depth);
+      for (const alphabeta_ai* ab : {&sorted, &unsorted}) {
+        ASSERT_EQ(ab->best_score(), minimax.best_score()) << where;
+        ASSERT_EQ(sorted_uci(ab->best_moves()),
+                  sorted_uci(minimax.best_moves()))
+            << where;
+        EXPECT_LE(ab->positions_searched(), minimax.positions_searched())
+            << where;
+      }
+      ASSERT_EQ(to_uci(m3), to_uci(m1)) << where;
+      ++compared;
+    }
+  }
+}
+
+// 40 positions: about 3 s in the debug build.
+TEST(AlphaBeta, SameResultAsMinimaxInRandomPositions) {
+  compare_in_random_positions(40);
+}
+
+// 400 positions: about 5 s in the release build, only with
+// CHESS_SLOW_TESTS=1.
+TEST(DeepAlphaBeta, SameResultAsMinimaxInManyRandomPositions) {
+  if (std::getenv("CHESS_SLOW_TESTS") == nullptr) {
+    GTEST_SKIP() << "set CHESS_SLOW_TESTS=1 to compare in 400 positions";
+  }
+  compare_in_random_positions(400);
+}
+
+// Scores have the right sign for both colors and count the half moves to
+// a mate, for both searches.
+TEST(AlphaBeta, ScoresHaveTheRightSignAndMateDistance) {
+  struct Case {
+    const char* fen;
+    const char* first;  // a move played before the search, or ""
+    int min_score, max_score;
+  };
+  constexpr int kMate = alphabeta_ai::kMateScore;
+  const Case cases[] = {
+      // A queen up, White or Black to move: clearly positive.
+      {"4k3/8/8/8/8/8/8/3QK3 w - - 0 1", "", 700, 1100},
+      {"3qk3/8/8/8/8/8/8/4K3 b - - 0 1", "", 700, 1100},
+      // A queen down: clearly negative.
+      {"3qk3/8/8/8/8/8/8/4K3 w - - 0 1", "", -1100, -700},
+      {"4k3/8/8/8/8/8/8/3QK3 b - - 0 1", "", -1100, -700},
+      // Mate in two for White: mate after 3 half moves.
+      {"7k/8/8/8/8/8/1R6/R3K3 w - - 0 1", "", kMate - 3, kMate - 3},
+      // After Rb7 Black is mated in 2 half moves whatever it plays.
+      {"7k/8/8/8/8/8/1R6/R3K3 w - - 0 1", "b2b7", -(kMate - 2), -(kMate - 2)},
+      // The same with colors swapped (board mirrored).
+      {"r3k3/1r6/8/8/8/8/8/7K b - - 0 1", "", kMate - 3, kMate - 3},
+      {"r3k3/1r6/8/8/8/8/8/7K b - - 0 1", "b7b2", -(kMate - 2), -(kMate - 2)},
+  };
+  for (const Case& c : cases) {
+    engine e1, e2;
+    e1.new_game(c.fen);
+    e2.new_game(c.fen);
+    if (c.first[0] != '\0') {
+      play(e1, c.first);
+      play(e2, c.first);
+    }
+    minimax_ai minimax(&e1, "minimax", 1, 3);
+    alphabeta_ai ab(&e2, "alphabeta", 1, 3);
+    minimax.next_move();
+    ab.next_move();
+    for (int score : {minimax.best_score(), ab.best_score()}) {
+      EXPECT_GE(score, c.min_score) << c.fen << " " << c.first;
+      EXPECT_LE(score, c.max_score) << c.fen << " " << c.first;
+    }
   }
 }
 
@@ -148,6 +249,30 @@ TEST(AlphaBeta, DepthBelowOneSearchesOneHalfMove) {
   EXPECT_NE(ai.next_move().type, NO_MOVE);
   alphabeta_ai negative(&e, "alphabeta", 1, -5);
   EXPECT_EQ(negative.depth(), 1);
+}
+
+// Strength in the normal test run: alpha-beta 3 half moves deep against the
+// naive AI (which looks 1 half move ahead), 6 games with colors swapping.
+// Catches a search that got much weaker (e.g. a sign error) without the
+// slow tests. Won 6 of 6 when it was written.
+TEST(AlphaBeta, QuicklyBeatsTheNaiveAi) {
+  const ai_info* naive = nullptr;
+  for (const ai_info& info : available_ais()) {
+    if (info.name == "Naive AI") naive = &info;
+  }
+  ASSERT_NE(naive, nullptr);
+  const ai_info shallow{"Alpha-Beta 3", [](engine* e, uint32_t seed) {
+                          return std::make_unique<alphabeta_ai>(
+                              e, "Alpha-Beta 3", seed, 3);
+                        }};
+  match_settings settings;
+  settings.games = 6;
+  settings.max_plies = 300;
+  settings.first_seed = 5;
+  settings.second_seed = 6;
+  match_stats s = play_match(shallow, *naive, settings);
+  EXPECT_GE(s.first_wins, 5) << describe(s, "Alpha-Beta 3", "Naive AI");
+  EXPECT_EQ(s.second_wins, 0) << describe(s, "Alpha-Beta 3", "Naive AI");
 }
 
 // Strength: a few seconds in the release build, only with CHESS_SLOW_TESTS=1.
