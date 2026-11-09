@@ -111,6 +111,7 @@ if(CHESS_BUILD_TESTS)
     tests/check_test.cpp
     tests/draw_test.cpp
     tests/evaluation_test.cpp
+    tests/fen_fuzz_test.cpp
     tests/fen_test.cpp
     tests/match_test.cpp
     tests/minimax_test.cpp
