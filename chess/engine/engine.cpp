@@ -294,6 +294,63 @@ fen_error engine::try_new_game(std::string_view fen) {
   return fen_error::NONE;
 }
 
+std::string engine::to_fen() const {
+  const game_history& state = *this->gh;
+  const board& b = state.curr_board;
+  std::string fen;
+
+  // 1. Pieces: rank 8 first, files a to h, digits for empty squares.
+  for (int y = 7; y >= 0; --y) {
+    int empty = 0;
+    for (int x = 0; x < 8; ++x) {
+      const piece p = b.get_piece(x, y);
+      if (!p.is_valid()) {
+        ++empty;
+        continue;
+      }
+      if (empty > 0) fen += static_cast<char>('0' + empty);
+      empty = 0;
+      const char letters[] = "kqbnrp";  // same order as enum piece_type
+      const char letter = letters[static_cast<int>(p.get_piece_type())];
+      fen += p.get_piece_color() == piece_color::WHITE
+                 ? static_cast<char>(letter - 'a' + 'A')
+                 : letter;
+    }
+    if (empty > 0) fen += static_cast<char>('0' + empty);
+    if (y > 0) fen += '/';
+  }
+
+  // 2. Side to move.
+  fen += state.to_move == piece_color::WHITE ? " w " : " b ";
+
+  // 3. Castling rights.
+  const int white = state.castlingrights[(int)piece_color::WHITE];
+  const int black = state.castlingrights[(int)piece_color::BLACK];
+  const size_t before = fen.size();
+  if (white & SHORT) fen += 'K';
+  if (white & LONG) fen += 'Q';
+  if (black & SHORT) fen += 'k';
+  if (black & LONG) fen += 'q';
+  if (fen.size() == before) fen += '-';
+
+  // 4. En passant square; (0, 0) means none.
+  const int ep_x = std::get<0>(state.ep_square);
+  const int ep_y = std::get<1>(state.ep_square);
+  if (ep_x == 0 && ep_y == 0) {
+    fen += " -";
+  } else {
+    fen += ' ';
+    fen += static_cast<char>('a' + ep_x);
+    fen += static_cast<char>('1' + ep_y);
+  }
+
+  // 5. and 6. Half move clock and move number (the engine counts half
+  // moves from the start: White's moves are the even ones).
+  fen += ' ' + std::to_string(state.halfmove_clock) + ' ' +
+         std::to_string(state.num_halfmoves / 2 + 1);
+  return fen;
+}
+
 void engine::new_game() { new_game(kStartFen); }
 
 void engine::new_game(std::string fen) {

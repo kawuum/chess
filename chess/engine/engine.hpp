@@ -59,6 +59,13 @@ class engine {
    */
   fen_error try_new_game(std::string_view fen);
   /**
+   * The current position as a FEN string, e.g. after 1. e4:
+   * "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1".
+   * try_new_game() of the result gives the same position again (without
+   * the moves before it: a repetition counts only from there on).
+   */
+  std::string to_fen() const;
+  /**
    * Performs a move. Only the start and target square of m (and for
    * promotions the promotion piece) are used; the engine looks the move up in
    * its list of legal moves.

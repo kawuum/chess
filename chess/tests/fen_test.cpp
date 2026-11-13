@@ -1,5 +1,6 @@
 // Tests for engine::new_game(fen): parsing of all FEN fields, error handling
 // and the game state of loaded positions.
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -198,6 +199,64 @@ TEST(Fen, LoadedCheckmateIsGameOver) {
   EXPECT_TRUE(gs.is_check);
   EXPECT_EQ(gs.result, BLACK_WIN);
   EXPECT_TRUE(legal_uci_moves(e).empty());
+}
+
+// FEN strings that to_fen() must give back exactly: all fields, castling
+// rights in every combination, en passant squares, counters.
+TEST(Fen, ToFenGivesTheLoadedFenBack) {
+  const char* const fens[] = {
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+      "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+      "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+      "r3k2r/8/8/8/8/8/8/R3K2R b Kq - 3 8",
+      "r3k2r/8/8/8/8/8/8/R3K2R w Qk - 0 20",
+      "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2",
+      "4k3/8/8/8/4P3/8/8/4K3 b - e3 0 1",
+      "7k/8/8/8/8/8/8/K6Q b - - 99 250",
+  };
+  for (const char* fen : fens) {
+    engine e;
+    ASSERT_EQ(e.try_new_game(fen), fen_error::NONE) << fen;
+    EXPECT_EQ(e.to_fen(), fen);
+  }
+}
+
+TEST(Fen, ToFenAfterMoves) {
+  engine e;
+  e.new_game();
+  play(e, "e2e4");
+  EXPECT_EQ(e.to_fen(),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+  play(e, "c7c5");
+  play(e, "g1f3");
+  EXPECT_EQ(e.to_fen(),
+            "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2");
+  play(e, "e7e6");
+  play(e, "f1e2");
+  play(e, "e8e7");  // the black king moves: Black loses both rights
+  EXPECT_EQ(e.to_fen(),
+            "rnbq1bnr/pp1pkppp/4p3/2p5/4P3/5N2/PPPPBPPP/RNBQK2R w KQ - 2 4");
+}
+
+// Every position of random games can be saved as FEN and loaded again:
+// the engine accepts its own FEN and gives the same string back.
+TEST(Fen, ToFenOfRandomGamesLoadsAgain) {
+  for (uint32_t seed = 1; seed <= 20; ++seed) {
+    engine e;
+    e.new_game();
+    std::mt19937 rng(seed);
+    for (int ply = 0; ply < 200; ++ply) {
+      const std::string fen = e.to_fen();
+      engine copy;
+      ASSERT_EQ(copy.try_new_game(fen), fen_error::NONE) << fen;
+      ASSERT_EQ(copy.to_fen(), fen);
+      ASSERT_EQ(legal_uci_moves(copy), legal_uci_moves(e)) << fen;
+      const std::vector<move> moves = e.get_all_legal_moves();
+      if (moves.empty()) break;
+      e.perform_move(moves[rng() % moves.size()]);
+    }
+  }
 }
 
 TEST(Fen, LoadedStalemateIsDraw) {
