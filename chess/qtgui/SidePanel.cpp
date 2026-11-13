@@ -1,12 +1,17 @@
 #include "SidePanel.hpp"
 
+#include <QComboBox>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
+#include <QPushButton>
+#include <QSignalBlocker>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
+#include "../ai/ai_registry.hpp"
 #include "ChessBoardWidget.hpp"
 
 namespace {
@@ -50,10 +55,15 @@ SidePanel::SidePanel(ChessBoardWidget* board, QWidget* parent)
   layout->setSpacing(10);
   layout->addWidget(createCard(piece_color::BLACK, black_));
   layout->addWidget(moves_, 1);
+  layout->addWidget(createResultCard());
   layout->addWidget(createCard(piece_color::WHITE, white_));
 
   connect(board_, &ChessBoardWidget::statusChanged, this, &SidePanel::refresh);
   connect(board_, &ChessBoardWidget::movesChanged, this, &SidePanel::refresh);
+  connect(board_, &ChessBoardWidget::playersChanged, this, [this] {
+    refreshPlayer(piece_color::WHITE, white_);
+    refreshPlayer(piece_color::BLACK, black_);
+  });
   refresh();
 }
 
@@ -89,27 +99,151 @@ QWidget* SidePanel::createCard(piece_color color, PlayerCard& card) {
       "background: palette(alternate-base); border-radius: 6px;"
       " padding: 2px 8px;");
 
+  card.check = new QLabel("Check", card.frame);
+  card.check->setObjectName(prefix + "Check");
+  card.check->setStyleSheet(
+      "background: #c62828; color: white; font-weight: bold;"
+      " border-radius: 6px; padding: 2px 8px;");
+  card.check->hide();
+
   auto* text = new QVBoxLayout;
   text->setSpacing(0);
   text->addWidget(card.name);
   text->addWidget(card.state);
-  auto* row = new QHBoxLayout(card.frame);
-  row->setContentsMargins(12, 10, 12, 10);
-  row->setSpacing(10);
-  row->addWidget(card.marker);
-  row->addLayout(text, 1);
-  row->addWidget(card.lead);
+  // Who plays this color: Human or one of the AIs, with the depth for AIs
+  // that search.
+  card.player = new QComboBox(card.frame);
+  card.player->setObjectName(prefix + "Player");
+  card.player->addItem("Human");
+  for (const ai_info& ai : available_ais()) {
+    card.player->addItem(QString::fromStdString(ai.name));
+  }
+  card.depthLabel = new QLabel("Depth", card.frame);
+  card.depth = new QSpinBox(card.frame);
+  card.depth->setObjectName(prefix + "Depth");
+  card.depth->setToolTip(
+      "How many half moves the AI looks ahead. Deeper plays better but\n"
+      "takes longer; the window waits while the AI thinks.");
+  card.depthLabel->setToolTip(card.depth->toolTip());
+  connect(card.player, &QComboBox::currentIndexChanged, this,
+          [this, color, &card] { choosePlayer(color, card); });
+  connect(card.depth, &QSpinBox::valueChanged, this,
+          [this, color, &card] { choosePlayer(color, card); });
+
+  auto* top = new QHBoxLayout;
+  top->setSpacing(10);
+  top->addWidget(card.marker);
+  top->addLayout(text, 1);
+  top->addWidget(card.check);
+  top->addWidget(card.lead);
+  auto* choice = new QHBoxLayout;
+  choice->setSpacing(6);
+  choice->addWidget(card.player, 1);
+  choice->addWidget(card.depthLabel);
+  choice->addWidget(card.depth);
+  auto* rows = new QVBoxLayout(card.frame);
+  rows->setContentsMargins(12, 10, 12, 10);
+  rows->setSpacing(8);
+  rows->addLayout(top);
+  rows->addLayout(choice);
+  refreshPlayer(color, card);
   return card.frame;
+}
+
+QWidget* SidePanel::createResultCard() {
+  result_ = new QFrame(this);
+  result_->setObjectName("resultCard");
+  result_->setStyleSheet(
+      "#resultCard { background: palette(base); border-radius: 10px;"
+      " border: 2px solid palette(highlight); }");
+  resultTitle_ = new QLabel(result_);
+  resultTitle_->setObjectName("resultTitle");
+  QFont big = resultTitle_->font();
+  big.setBold(true);
+  big.setPointSizeF(big.pointSizeF() * 1.4);
+  resultTitle_->setFont(big);
+  resultReason_ = new QLabel(result_);
+  resultReason_->setObjectName("resultReason");
+  auto* newGame = new QPushButton("New Game", result_);
+  newGame->setObjectName("resultNewGame");
+  connect(newGame, &QPushButton::clicked, board_, &ChessBoardWidget::newGame);
+  auto* layout = new QVBoxLayout(result_);
+  layout->setContentsMargins(12, 10, 12, 10);
+  layout->setSpacing(4);
+  layout->addWidget(resultTitle_);
+  layout->addWidget(resultReason_);
+  layout->addSpacing(6);
+  layout->addWidget(newGame);
+  result_->hide();
+  return result_;
+}
+
+void SidePanel::refreshResult() {
+  const game_result result = board_->result();
+  result_->setVisible(result != RUNNING);
+  if (result == RUNNING) return;
+  if (result == DRAW) {
+    resultTitle_->setText("Draw");
+    switch (board_->drawReason()) {
+      case STALEMATE:
+        resultReason_->setText("by stalemate");
+        break;
+      case THREEFOLD_REPETITION:
+        resultReason_->setText("threefold repetition");
+        break;
+      case FIFTY_MOVE_RULE:
+        resultReason_->setText("50-move rule");
+        break;
+      case INSUFFICIENT_MATERIAL:
+        resultReason_->setText("insufficient material");
+        break;
+      case NO_DRAW:
+        resultReason_->clear();
+        break;
+    }
+  } else {
+    resultTitle_->setText(result == WHITE_WIN ? "White wins" : "Black wins");
+    resultReason_->setText("by checkmate");
+  }
 }
 
 void SidePanel::refresh() {
   refreshCard(piece_color::WHITE, white_);
   refreshCard(piece_color::BLACK, black_);
   refreshMoves();
+  refreshResult();
+}
+
+void SidePanel::refreshPlayer(piece_color color, PlayerCard& card) {
+  // Setting the controls must not count as a choice of the user.
+  const QSignalBlocker blockPlayer(card.player);
+  const QSignalBlocker blockDepth(card.depth);
+  const ai_info* info = board_->playerInfo(color);
+  int index = 0;  // Human
+  const std::vector<ai_info>& ais = available_ais();
+  for (size_t i = 0; i < ais.size(); ++i) {
+    if (&ais[i] == info) index = static_cast<int>(i) + 1;
+  }
+  card.player->setCurrentIndex(index);
+  const bool hasDepth = info != nullptr && info->create_with_depth != nullptr;
+  card.depthLabel->setVisible(hasDepth);
+  card.depth->setVisible(hasDepth);
+  if (hasDepth) {
+    card.depth->setRange(1, info->max_depth_interactive);
+    card.depth->setValue(board_->playerDepth(color));
+  }
+}
+
+void SidePanel::choosePlayer(piece_color color, PlayerCard& card) {
+  const int index = card.player->currentIndex();
+  const ai_info* info = index > 0 ? &available_ais()[index - 1] : nullptr;
+  // A new AI starts with its default depth; the same AI keeps the chosen one.
+  const int depth = info == board_->playerInfo(color) ? card.depth->value() : 0;
+  board_->setPlayer(color, info, depth);  // refreshPlayer() follows
 }
 
 void SidePanel::refreshCard(piece_color color, PlayerCard& card) {
-  card.name->setText(colorName(color) + " · " + board_->playerName(color));
+  card.name->setText(colorName(color));
 
   const bool toMove = board_->colorToMove() == color;
   QString state;
@@ -130,6 +264,7 @@ void SidePanel::refreshCard(piece_color color, PlayerCard& card) {
   const int lead = color == piece_color::WHITE ? balance : -balance;
   card.lead->setText(QString("+%1").arg(lead));
   card.lead->setVisible(lead > 0);
+  card.check->setVisible(toMove && board_->isCheck() && !board_->isGameOver());
 
   // The side to move gets a frame in the accent color.
   card.frame->setStyleSheet(

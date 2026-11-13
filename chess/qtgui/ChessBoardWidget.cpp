@@ -2,7 +2,6 @@
 
 #include <QImageReader>
 #include <QInputDialog>
-#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -75,13 +74,22 @@ void ChessBoardWidget::loadPosition(const std::string& fen) {
   startedNewGame();
 }
 
+fen_error ChessBoardWidget::tryLoadPosition(const std::string& fen) {
+  const fen_error error = eng_.try_new_game(fen);
+  if (error == fen_error::NONE) startedNewGame();
+  return error;
+}
+
+QString ChessBoardWidget::fen() const {
+  return QString::fromStdString(eng_.to_fen());
+}
+
 void ChessBoardWidget::startedNewGame() {
   // A position from a FEN may be from the middle of a game: the move list
   // then starts with that move number.
   firstHalfmove_ = eng_.get_current_gamestate().num_halfmoves;
   moveList_.clear();
   stopAnimation();
-  gameOverShown_ = false;
   clearSelection();
   emit movesChanged();
   afterMove();
@@ -142,18 +150,23 @@ void ChessBoardWidget::undoMove() {
     moveList_.pop_back();
   }
   stopAnimation();
-  gameOverShown_ = false;
   clearSelection();
   emit movesChanged();
   afterMove();
 }
 
-void ChessBoardWidget::setPlayer(piece_color color, const ai_info* ai) {
+void ChessBoardWidget::setPlayer(piece_color color, const ai_info* ai,
+                                 int depth) {
   int index = static_cast<int>(color);
+  info_[index] = ai;
+  depth_[index] =
+      ai && ai->create_with_depth ? (depth > 0 ? depth : ai->default_depth) : 0;
   // Assigning a new unique_ptr deletes the previous AI automatically.
   // A new random seed every time: a game in the GUI should not be the same
   // as the last one.
-  ai_[index] = ai ? ai->create(&eng_, std::random_device{}()) : nullptr;
+  ai_[index] = ai ? create_ai(*ai, &eng_, std::random_device{}(), depth_[index])
+                  : nullptr;
+  emit playersChanged();
   clearSelection();
   afterMove();
 }
@@ -165,12 +178,9 @@ void ChessBoardWidget::afterMove() {
   // so that the status text below already says so.
   waitingForClick_ = false;
   if (!isGameOver() && isAiToMove()) scheduleAiMove();
+  // A finished game is shown in the side panel (no modal box: it would
+  // stop everything until clicked).
   emit statusChanged(statusText());
-
-  if (isGameOver() && !gameOverShown_) {
-    gameOverShown_ = true;
-    QMessageBox::information(this, "Game over", statusText());
-  }
 }
 
 bool ChessBoardWidget::isGameOver() {
@@ -239,11 +249,8 @@ QString ChessBoardWidget::statusText() {
     case RUNNING:
       break;
   }
+  // Short: who plays which color is on the player cards.
   QString text = QString("%1 to move").arg(colorName(gs.to_move));
-  if (isAiToMove()) {
-    const auto& ai = ai_[static_cast<int>(gs.to_move)];
-    text += QString(" (%1)").arg(QString::fromStdString(ai->get_name()));
-  }
   if (gs.is_check) text += ". Check!";
   if (waitingForClick_) text += " - click the board for the next move";
   return text;

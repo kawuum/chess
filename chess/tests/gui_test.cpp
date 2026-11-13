@@ -5,7 +5,9 @@
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
+#include <QClipboard>
 #include <QComboBox>
+#include <QGuiApplication>
 #include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
@@ -16,6 +18,7 @@
 #include <QTest>
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <vector>
 
@@ -64,6 +67,18 @@ class Gui : public testing::Test {
   }
 
   QString status() { return window.statusBar()->currentMessage(); }
+
+  // An entry of the Game menu, e.g. "&New Game".
+  QAction* game_action(const QString& text) {
+    for (QAction* a : window.menuBar()->actions()) {
+      if (a->text() == "&Game") return find_action(a->menu(), text);
+    }
+    return nullptr;
+  }
+
+  QString combo_text(const char* name) {
+    return window.findChild<QComboBox*>(name)->currentText();
+  }
 
   // The submenu Players > White/Black.
   QMenu* player_menu(const QString& color) {
@@ -211,10 +226,11 @@ TEST_F(Gui, SidePanelListsTheMovesInNotation) {
 }
 
 TEST_F(Gui, SidePanelShowsPlayersAndWhoIsToMove) {
-  EXPECT_EQ(label(window, "whiteName"), "White · Human");
+  EXPECT_EQ(label(window, "whiteName"), "White");
+  EXPECT_EQ(combo_text("whitePlayer"), "Human");
   EXPECT_EQ(label(window, "whiteState"), "your move");
   find_action(player_menu("&Black"), "Naive AI")->trigger();
-  EXPECT_EQ(label(window, "blackName"), "Black · Naive AI");
+  EXPECT_EQ(combo_text("blackPlayer"), "Naive AI");
   click(4, 1);
   click(4, 3);
   EXPECT_EQ(label(window, "blackState"), "thinking...");
@@ -245,7 +261,7 @@ TEST_F(Gui, AiChosenInMenuAnswersAMove) {
   find_action(black, "Random AI")->trigger();
   click(4, 1);
   click(4, 3);
-  EXPECT_EQ(status(), "Black to move (Random AI)");
+  EXPECT_EQ(status(), "Black to move");  // the AI's name is on its card
   // The AI moves after a short delay (QTimer), so wait for it.
   EXPECT_TRUE(
       QTest::qWaitFor([&] { return status() == "White to move"; }, 2000));
@@ -263,11 +279,9 @@ TEST_F(Gui, AiVsAiWaitsForAClick) {
   // human. When it runs out, it must not make a move.
   EXPECT_TRUE(board->isAiMovePending());
   ASSERT_TRUE(QTest::qWaitFor([&] { return !board->isAiMovePending(); }, 5000));
-  EXPECT_EQ(status(),
-            "White to move (Random AI) - click the board for the next move");
+  EXPECT_EQ(status(), "White to move - click the board for the next move");
   click(4, 4);  // any square
-  EXPECT_EQ(status(),
-            "Black to move (Random AI) - click the board for the next move");
+  EXPECT_EQ(status(), "Black to move - click the board for the next move");
   // No timer runs: without a click nothing happens (no fixed wait needed).
   EXPECT_FALSE(board->isAiMovePending());
   EXPECT_TRUE(board->isWaitingForClick());
@@ -480,9 +494,183 @@ TEST_F(Gui, SimulationReportsAnErrorInsteadOfCrashing) {
   EXPECT_TRUE(dialog.findChild<QPushButton*>("start")->isEnabled());
 }
 
+TEST_F(Gui, CopyPositionPutsTheFenOnTheClipboard) {
+  click(4, 1);  // e2
+  click(4, 3);  // e4
+  QAction* copy = game_action("&Copy Position (FEN)");
+  ASSERT_NE(copy, nullptr);
+  copy->trigger();
+  EXPECT_EQ(QGuiApplication::clipboard()->text(),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+}
+
+TEST_F(Gui, LoadPositionAsksForAFenAndLoadsIt) {
+  QString suggested;
+  window.setFenAsker([&](const QString& suggestion,
+                         const QString& problem) -> std::optional<QString> {
+    suggested = suggestion;
+    EXPECT_TRUE(problem.isEmpty());
+    return QString("  4k3/P7/8/8/8/8/8/4K2R w - - 0 1  ");  // spaces trimmed
+  });
+  QGuiApplication::clipboard()->setText("not a FEN");
+  QAction* load = game_action("&Load Position (FEN)...");
+  ASSERT_NE(load, nullptr);
+  load->trigger();
+  // The clipboard holds no FEN: the current position is suggested.
+  EXPECT_EQ(suggested,
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  piece p = board->pieceAt(0, 6);  // a7
+  ASSERT_TRUE(p.is_valid());
+  EXPECT_EQ(p.get_piece_type(), PAWN);
+  EXPECT_EQ(board->fen(), "4k3/P7/8/8/8/8/8/4K2R w - - 0 1");
+}
+
+TEST_F(Gui, LoadPositionSuggestsAFenFromTheClipboard) {
+  const QString fen = "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1";
+  QGuiApplication::clipboard()->setText(fen + "\n");
+  QString suggested;
+  window.setFenAsker(
+      [&](const QString& suggestion, const QString&) -> std::optional<QString> {
+        suggested = suggestion;
+        return std::nullopt;  // cancelled
+      });
+  game_action("&Load Position (FEN)...")->trigger();
+  EXPECT_EQ(suggested, fen);
+}
+
+TEST_F(Gui, InvalidFenIsExplainedAndTheGameGoesOn) {
+  click(4, 1);  // e2
+  click(4, 3);  // e4
+  const QString before = board->fen();
+  std::vector<QString> problems, suggestions;
+  window.setFenAsker([&](const QString& suggestion,
+                         const QString& problem) -> std::optional<QString> {
+    problems.push_back(problem);
+    suggestions.push_back(suggestion);
+    if (problems.size() == 1) return QString("P3k3/8/8/8/8/8/8/4K3 w - - 0 1");
+    return std::nullopt;  // cancelled after seeing the problem
+  });
+  game_action("&Load Position (FEN)...")->trigger();
+  ASSERT_EQ(problems.size(), 2u);
+  EXPECT_TRUE(problems[0].isEmpty());
+  EXPECT_TRUE(problems[1].contains("rank 1 or 8")) << problems[1].toStdString();
+  // The rejected text is offered again, so it can be corrected.
+  EXPECT_EQ(suggestions[1], "P3k3/8/8/8/8/8/8/4K3 w - - 0 1");
+  EXPECT_EQ(board->fen(), before);  // the game goes on
+  EXPECT_EQ(status(), "Black to move");
+}
+
+// The end of a game is shown in the side panel, with a button for a new
+// game. Before, a modal "Game over" box appeared, which a test could not
+// click (and so no GUI test could finish a game).
+TEST_F(Gui, CheckmateShowsTheResultInTheSidePanel) {
+  QWidget* card = window.findChild<QWidget*>("resultCard");
+  ASSERT_NE(card, nullptr);
+  EXPECT_FALSE(card->isVisibleTo(&window));
+  board->loadPosition("7k/8/6K1/8/8/8/8/5Q2 w - - 0 1");
+  click(5, 0);  // f1
+  click(5, 7);  // f8: mate
+  EXPECT_TRUE(card->isVisibleTo(&window));
+  EXPECT_EQ(window.findChild<QLabel*>("resultTitle")->text(), "White wins");
+  EXPECT_EQ(window.findChild<QLabel*>("resultReason")->text(), "by checkmate");
+  // Undo takes the result back.
+  game_action("&Undo Move")->trigger();
+  EXPECT_FALSE(card->isVisibleTo(&window));
+  click(5, 0);
+  click(5, 7);
+  // "New Game" on the card starts a new game.
+  click_button(&window, "resultNewGame");
+  EXPECT_FALSE(card->isVisibleTo(&window));
+  EXPECT_EQ(board->fen(),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+TEST_F(Gui, DrawsShowTheirReason) {
+  struct Ending {
+    const char* fen;
+    int from_x, from_y, to_x, to_y;
+    const char* reason;
+  };
+  const Ending endings[] = {
+      {"7k/8/5K2/8/8/8/8/6Q1 w - - 0 1", 6, 0, 6, 5, "by stalemate"},
+      // The white king takes the last black piece (the rook that gives
+      // check): king against king.
+      {"8/8/8/8/8/8/4r3/k3K3 w - - 0 1", 4, 0, 4, 1, "insufficient material"},
+      // The 100th half move without capture or pawn move.
+      {"7k/8/8/8/8/8/8/K5R1 w - - 99 80", 6, 0, 6, 1, "50-move rule"},
+  };
+  for (const Ending& e : endings) {
+    board->loadPosition(e.fen);
+    click(e.from_x, e.from_y);
+    click(e.to_x, e.to_y);
+    EXPECT_EQ(window.findChild<QLabel*>("resultTitle")->text(), "Draw")
+        << e.fen;
+    EXPECT_EQ(window.findChild<QLabel*>("resultReason")->text(), e.reason)
+        << e.fen;
+  }
+}
+
+// A check is shown on the card of the player in check, not only by the glow
+// on the board.
+TEST_F(Gui, CheckIsShownOnThePlayerCard) {
+  QLabel* white_check = window.findChild<QLabel*>("whiteCheck");
+  QLabel* black_check = window.findChild<QLabel*>("blackCheck");
+  ASSERT_NE(white_check, nullptr);
+  ASSERT_NE(black_check, nullptr);
+  board->loadPosition("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1");
+  EXPECT_FALSE(black_check->isVisibleTo(&window));
+  click(0, 0);  // a1
+  click(0, 7);  // a8: check
+  EXPECT_TRUE(black_check->isVisibleTo(&window));
+  EXPECT_FALSE(white_check->isVisibleTo(&window));
+  EXPECT_EQ(status(), "Black to move. Check!");
+  click(4, 7);  // e8
+  click(4, 6);  // e7: out of check
+  EXPECT_FALSE(black_check->isVisibleTo(&window));
+}
+
+// Each player card chooses who plays its color, and for searching AIs the
+// depth. The Players menu shows the same choice.
+TEST_F(Gui, PlayerCardChoosesTheAiAndItsDepth) {
+  QComboBox* black = window.findChild<QComboBox*>("blackPlayer");
+  QSpinBox* depth = window.findChild<QSpinBox*>("blackDepth");
+  ASSERT_NE(black, nullptr);
+  ASSERT_NE(depth, nullptr);
+  EXPECT_EQ(black->currentText(), "Human");
+  EXPECT_FALSE(depth->isVisibleTo(&window));
+
+  black->setCurrentText("Alpha-Beta AI");
+  EXPECT_EQ(board->playerName(piece_color::BLACK), "Alpha-Beta AI");
+  EXPECT_TRUE(find_action(player_menu("&Black"), "Alpha-Beta AI")->isChecked());
+  EXPECT_TRUE(depth->isVisibleTo(&window));
+  EXPECT_EQ(depth->value(), 4);    // the default depth
+  EXPECT_EQ(depth->maximum(), 5);  // deeper would freeze the window
+  EXPECT_EQ(depth->minimum(), 1);
+  depth->setValue(2);
+  EXPECT_EQ(board->playerDepth(piece_color::BLACK), 2);
+  EXPECT_EQ(board->playerName(piece_color::BLACK), "Alpha-Beta AI");
+
+  black->setCurrentText("Random AI");  // no depth to choose
+  EXPECT_FALSE(depth->isVisibleTo(&window));
+  EXPECT_EQ(board->playerDepth(piece_color::BLACK), 0);
+
+  black->setCurrentText("Human");
+  EXPECT_EQ(board->playerName(piece_color::BLACK), "Human");
+  EXPECT_TRUE(find_action(player_menu("&Black"), "Human")->isChecked());
+}
+
+TEST_F(Gui, MenuChoiceShowsOnThePlayerCard) {
+  find_action(player_menu("&White"), "Minimax AI")->trigger();
+  EXPECT_EQ(combo_text("whitePlayer"), "Minimax AI");
+  QSpinBox* depth = window.findChild<QSpinBox*>("whiteDepth");
+  EXPECT_TRUE(depth->isVisibleTo(&window));
+  EXPECT_EQ(depth->value(), 3);
+  EXPECT_EQ(depth->maximum(), 3);
+}
+
+// White pawn on a7, one step before promotion.
 // The rook on h1 keeps enough material on the board: after a promotion to a
-// knight, king and knight against king would be a draw, and the "game over"
-// dialog would wait for a click forever.
+// knight, king and knight against king would end the game as a draw.
 const char* const kPromotionFen = "4k3/P7/8/8/8/8/8/4K2R w - - 0 1";
 
 TEST_F(Gui, PromotionPlaysTheChosenPiece) {

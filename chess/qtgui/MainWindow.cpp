@@ -3,8 +3,12 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QClipboard>
 #include <QFile>
+#include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -38,6 +42,16 @@ MainWindow::MainWindow(QWidget* parent)
 
   game->addSeparator();
 
+  QAction* copyFen = game->addAction("&Copy Position (FEN)");
+  copyFen->setShortcut(QKeySequence("Ctrl+Shift+C"));
+  connect(copyFen, &QAction::triggered, this, &MainWindow::copyFen);
+
+  QAction* loadFen = game->addAction("&Load Position (FEN)...");
+  loadFen->setShortcut(QKeySequence("Ctrl+L"));
+  connect(loadFen, &QAction::triggered, this, &MainWindow::loadFen);
+
+  game->addSeparator();
+
   QAction* simulate = game->addAction("&Simulate Games...");
   connect(simulate, &QAction::triggered, this, &MainWindow::showSimulation);
 
@@ -64,6 +78,51 @@ MainWindow::MainWindow(QWidget* parent)
   // The board emitted its first status in its constructor, before this
   // connection existed, so show it once by hand.
   statusBar()->showMessage(board_->statusText());
+  // A short note (e.g. "copied") disappears after a few seconds; then the
+  // board's status comes back.
+  connect(statusBar(), &QStatusBar::messageChanged, this,
+          [this](const QString& text) {
+            if (text.isEmpty()) statusBar()->showMessage(board_->statusText());
+          });
+
+  // The real input dialog; tests replace it with setFenAsker().
+  fenAsker_ = [this](const QString& suggestion,
+                     const QString& problem) -> std::optional<QString> {
+    QString label = "Position in FEN, e.g. copied from a simulation:";
+    if (!problem.isEmpty()) label = problem + "\n\n" + label;
+    bool ok = false;
+    const QString text = QInputDialog::getText(
+        this, "Load Position", label, QLineEdit::Normal, suggestion, &ok);
+    if (!ok) return std::nullopt;
+    return text;
+  };
+}
+
+void MainWindow::copyFen() {
+  QGuiApplication::clipboard()->setText(board_->fen());
+  statusBar()->showMessage("Position copied to the clipboard (FEN)", 3000);
+}
+
+void MainWindow::loadFen() {
+  // Suggest the clipboard if it holds a valid FEN (e.g. just copied from
+  // another program), otherwise the current position to edit.
+  const QString clipboard = QGuiApplication::clipboard()->text().trimmed();
+  engine probe;
+  QString suggestion =
+      probe.try_new_game(clipboard.toStdString()) == fen_error::NONE
+          ? clipboard
+          : board_->fen();
+  QString problem;
+  while (true) {
+    const std::optional<QString> text = fenAsker_(suggestion, problem);
+    if (!text) return;  // cancelled: the game goes on
+    const fen_error error =
+        board_->tryLoadPosition(text->trimmed().toStdString());
+    if (error == fen_error::NONE) return;
+    // Ask again with the reason and the rejected text, to correct it.
+    problem = fen_error_message(error);
+    suggestion = *text;
+  }
 }
 
 void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
@@ -76,20 +135,35 @@ void MainWindow::addPlayerMenu(QMenu* parent, const QString& title,
   QAction* human = menu->addAction("Human");
   human->setCheckable(true);
   human->setChecked(true);
+  human->setData(0);  // 0 = Human, i + 1 = available_ais()[i]
   group->addAction(human);
   connect(human, &QAction::triggered, board_,
           [this, color] { board_->setPlayer(color, nullptr); });
 
   menu->addSeparator();
-  for (const ai_info& ai : available_ais()) {
+  const std::vector<ai_info>& ais = available_ais();
+  for (size_t i = 0; i < ais.size(); ++i) {
+    const ai_info& ai = ais[i];
     QAction* action = menu->addAction(QString::fromStdString(ai.name));
     action->setCheckable(true);
+    action->setData(static_cast<int>(i) + 1);
     group->addAction(action);
     // The pointer stays valid: available_ais() is a static list.
     const ai_info* info = &ai;
     connect(action, &QAction::triggered, board_,
             [this, color, info] { board_->setPlayer(color, info); });
   }
+
+  // The player cards choose too: keep the check mark on the current player.
+  connect(board_, &ChessBoardWidget::playersChanged, group,
+          [this, color, group] {
+            const ai_info* info = board_->playerInfo(color);
+            const int index =
+                info ? static_cast<int>(info - available_ais().data()) + 1 : 0;
+            for (QAction* action : group->actions()) {
+              if (action->data().toInt() == index) action->setChecked(true);
+            }
+          });
 }
 
 QString MainWindow::aboutText() {

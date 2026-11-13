@@ -31,6 +31,11 @@ class ChessBoardWidget : public QWidget {
   // Starts a game from the given position (FEN). Throws std::invalid_argument
   // for an invalid FEN; the current game is unchanged then.
   void loadPosition(const std::string& fen);
+  // Starts a new game from fen if it is valid; otherwise the current game
+  // goes on and the reason is returned.
+  fen_error tryLoadPosition(const std::string& fen);
+  // The current position as a FEN string.
+  QString fen() const;
   // The piece on square (x, y), an invalid piece if the square is empty.
   piece pieceAt(int x, int y);
   // Takes back the last move. Against an AI it takes back the AI's answer
@@ -38,7 +43,16 @@ class ChessBoardWidget : public QWidget {
   void undoMove();
   // Chooses who plays the given color: an AI from available_ais(), or a
   // human if ai is nullptr.
-  void setPlayer(piece_color color, const ai_info* ai);
+  // Who plays a color: nullptr = a human, else the AI from the registry.
+  // depth: the search depth for AIs that have one (0 = their default).
+  void setPlayer(piece_color color, const ai_info* ai, int depth = 0);
+  const ai_info* playerInfo(piece_color color) const {
+    return info_[static_cast<int>(color)];
+  }
+  // The search depth of the color's AI; 0 for humans and AIs without one.
+  int playerDepth(piece_color color) const {
+    return depth_[static_cast<int>(color)];
+  }
   // Whose turn it is, check, or how the game ended.
   QString statusText();
 
@@ -64,6 +78,11 @@ class ChessBoardWidget : public QWidget {
   QString playerName(piece_color color) const;
   piece_color colorToMove();
   bool isGameOver();
+  // How the game ended (RUNNING while it goes on), and why if it is a draw.
+  game_result result() const { return eng_.current_state().result; }
+  // The side to move is in check.
+  bool isCheck() const { return eng_.current_state().is_check; }
+  draw_reason drawReason() const { return eng_.current_state().draw; }
   // An AI plays the side to move; it may be waiting for a click.
   bool isAiToMove();
   bool isWaitingForClick() const { return waitingForClick_; }
@@ -76,6 +95,8 @@ class ChessBoardWidget : public QWidget {
  signals:
   // Short text for the status bar, e.g. "White to move".
   void statusChanged(const QString& text);
+  // setPlayer() changed who plays a color (or the depth).
+  void playersChanged();
   // A move was played or taken back, or a new game started.
   void movesChanged();
 
@@ -109,8 +130,8 @@ class ChessBoardWidget : public QWidget {
   void performHumanMove(::move m);
   std::optional<piece_type> askPromotionPiece();
 
-  // Called after every move: repaint, update status, show game over or let
-  // the AI move next.
+  // Called after every move: repaint, update status (the side panel shows a
+  // finished game), let the AI move next.
   void afterMove();
   bool isAiVsAi();
   bool aiVsAiWaitsForClick();
@@ -131,6 +152,8 @@ class ChessBoardWidget : public QWidget {
   engine eng_;
   // AI per color, indexed by (int)piece_color. nullptr means human.
   std::array<std::unique_ptr<ai_template>, 2> ai_;
+  std::array<const ai_info*, 2> info_{};  // what ai_ was created from
+  std::array<int, 2> depth_{};
   // Index: color * 6 + piece_type. Rendered for renderedSize_ (square size
   // in points) and renderedRatio_ (pixels per point of the screen).
   std::array<QPixmap, 12> pieceImages_;
@@ -142,7 +165,6 @@ class ChessBoardWidget : public QWidget {
   bool aiMovePending_ = false;    // a timer for the next AI move is running
   bool waitingForClick_ = false;  // the next AI move comes with a click
   int aiVsAiDelay_ = kWaitForClick;
-  bool gameOverShown_ = false;
   PromotionChooser promotionChooser_;  // empty: use the dialog
 
   QStringList moveList_;
