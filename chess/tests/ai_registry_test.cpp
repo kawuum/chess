@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "../ai/alphabeta/alphabeta_ai.hpp"
+#include "../ai/minimax/minimax_ai.hpp"
 #include "test_helpers.hpp"
 
 namespace {
@@ -63,6 +65,48 @@ TEST(AiRegistry, CreatedAiHasTheRegistryName) {
   e.new_game();
   for (const ai_info& info : available_ais()) {
     EXPECT_EQ(info.create(&e, 1)->get_name(), info.name);
+  }
+}
+
+// AIs that search have a depth: a sensible range for the GUI, and the depth
+// really reaches the AI (a deeper search looks at more positions, which a
+// test can see in the number of moves it needs to find a mate).
+TEST(AiRegistry, SearchingAisHaveADepthRange) {
+  int with_depth = 0;
+  for (const ai_info& info : available_ais()) {
+    if (!info.create_with_depth) {
+      EXPECT_EQ(info.default_depth, 0) << info.name;
+      continue;
+    }
+    ++with_depth;
+    EXPECT_GE(info.default_depth, 1) << info.name;
+    EXPECT_LE(info.default_depth, info.max_depth_interactive) << info.name;
+    EXPECT_LE(info.max_depth_interactive, info.max_depth) << info.name;
+    engine e;
+    e.new_game();
+    std::unique_ptr<ai_template> ai = create_ai(info, &e, 1, 1);
+    EXPECT_EQ(ai->get_name(), info.name);
+    EXPECT_TRUE(has_move(e, to_uci(ai->next_move()))) << info.name;
+  }
+  EXPECT_EQ(with_depth, 2);  // Minimax and Alpha-Beta
+}
+
+// The depth given to create_ai() reaches the AI; 0 means its default.
+TEST(AiRegistry, DepthReachesTheAi) {
+  auto depth_of = [](ai_template* ai) {
+    if (auto* m = dynamic_cast<minimax_ai*>(ai)) return m->depth();
+    if (auto* a = dynamic_cast<alphabeta_ai*>(ai)) return a->depth();
+    return -1;
+  };
+  for (const ai_info& info : available_ais()) {
+    if (!info.create_with_depth) continue;
+    engine e;
+    e.new_game();
+    EXPECT_EQ(depth_of(create_ai(info, &e, 1, 2).get()), 2) << info.name;
+    EXPECT_EQ(depth_of(create_ai(info, &e, 1, 0).get()), info.default_depth)
+        << info.name;
+    EXPECT_EQ(depth_of(info.create(&e, 1).get()), info.default_depth)
+        << info.name;
   }
 }
 
