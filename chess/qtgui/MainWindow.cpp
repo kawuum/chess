@@ -40,6 +40,17 @@ MainWindow::MainWindow(QWidget* parent)
   undo->setShortcut(QKeySequence::Undo);
   connect(undo, &QAction::triggered, board_, &ChessBoardWidget::undoMove);
 
+  // AI against AI step by step: Space plays the next move. Enabled only
+  // while the board waits for it; otherwise Space keeps its usual job
+  // (e.g. pressing the button that has the keyboard focus).
+  QAction* next = game->addAction("Next AI &Move");
+  next->setShortcut(Qt::Key_Space);
+  next->setEnabled(false);
+  connect(next, &QAction::triggered, board_,
+          [this] { board_->playNextAiMove(); });
+  connect(board_, &ChessBoardWidget::statusChanged, next,
+          [this, next] { next->setEnabled(board_->isWaitingForClick()); });
+
   game->addSeparator();
 
   QAction* copyFen = game->addAction("&Copy Position (FEN)");
@@ -202,10 +213,10 @@ void MainWindow::addAiSpeedMenu(QMenu* parent) {
     int delayMs;
   };
   const Choice choices[] = {
-      {"Wait for click", ChessBoardWidget::kWaitForClick},
-      {"0.3 s per move", 300},
-      {"1 s per move", 1000},
-      {"2 s per move", 2000},
+      {"Step by step (click or Space)", ChessBoardWidget::kWaitForClick},
+      {"Fast (0.3 s per move)", 300},
+      {"Medium (1 s per move)", 1000},
+      {"Slow (2 s per move)", 2000},
   };
   for (const Choice& choice : choices) {
     QAction* action = menu->addAction(choice.text);

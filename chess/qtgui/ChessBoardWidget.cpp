@@ -243,19 +243,24 @@ QString ChessBoardWidget::statusText() {
   // Short: who plays which color is on the player cards.
   QString text = QString("%1 to move").arg(colorName(gs.to_move));
   if (gs.is_check) text += ". Check!";
-  if (waitingForClick_) text += " - click the board for the next move";
+  if (waitingForClick_) {
+    text += " - click the board or press Space for the next move";
+  }
   return text;
 }
 
 // ------------------------------------------------------------ user clicks
 
+bool ChessBoardWidget::playNextAiMove() {
+  if (!waitingForClick_) return false;
+  performAiMove();
+  return true;
+}
+
 void ChessBoardWidget::mousePressEvent(QMouseEvent* event) {
   // AI against AI, waiting for a click: anywhere on the widget plays the
   // next AI move.
-  if (event->button() == Qt::LeftButton && waitingForClick_) {
-    performAiMove();
-    return;
-  }
+  if (event->button() == Qt::LeftButton && playNextAiMove()) return;
   if (event->button() != Qt::LeftButton || isGameOver() || isAiToMove()) {
     return;
   }

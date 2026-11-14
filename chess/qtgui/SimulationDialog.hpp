@@ -60,6 +60,7 @@ class SimulationDialog : public QDialog {
   // the depth row only for an AI that searches. "Random seed" draws a new
   // seed at every start (and greys out the field).
   struct AiChooser {
+    QGroupBox* box = nullptr;
     QComboBox* ai = nullptr;
     QWidget* seedRow = nullptr;
     QCheckBox* randomSeed = nullptr;
@@ -68,8 +69,9 @@ class SimulationDialog : public QDialog {
     QSpinBox* depth = nullptr;
   };
   // name: "first" or "second", the start of the object names (for tests).
-  QGroupBox* createChooser(const QString& title, const QString& name,
-                           AiChooser& chooser);
+  QGroupBox* createChooser(const QString& name, AiChooser& chooser);
+  // "First AI (White)", or "First AI" when the colors swap every game.
+  void updateGroupTitles();
   const ai_info& selectedAi(const AiChooser& chooser) const;
   // Shows or hides the seed and depth rows to match the selected AI; the
   // depth starts at the AI's default.

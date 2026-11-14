@@ -117,9 +117,9 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
   vs->setAlignment(Qt::AlignCenter);
   vs->setStyleSheet("color: palette(placeholder-text); font-size: 18px;");
   auto* choosers = new QHBoxLayout;
-  choosers->addWidget(createChooser("White", "first", first_), 1);
+  choosers->addWidget(createChooser("first", first_), 1);
   choosers->addWidget(vs);
-  choosers->addWidget(createChooser("Black", "second", second_), 1);
+  choosers->addWidget(createChooser("second", second_), 1);
 
   // 2. Number of games and the buttons.
   games_ = new QSpinBox(this);
@@ -145,6 +145,9 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
       "Off: the AI under White always plays White.\n"
       "On: the AIs swap colors after every game, which shares White's\n"
       "advantage of the first move fairly.");
+  connect(swapColors_, &QCheckBox::toggled, this,
+          &SimulationDialog::updateGroupTitles);
+  updateGroupTitles();
   controls->addSpacing(12);
   controls->addWidget(swapColors_);
   controls->addStretch();
@@ -178,8 +181,8 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
                               "Games this AI won by checkmate (orange in the "
                               "bar above).",
                               kSecondColor));
-  tiles->addWidget(
-      createTile(speed_, "speed", "Games played per second so far."));
+  tiles->addWidget(createTile(
+      speed_, "speed", "Average time per game so far, from start to now."));
   auto* chipRow = new QHBoxLayout;
   chipRow->setSpacing(6);
   // What each label means, shown when the mouse rests on it. Same order as
@@ -195,17 +198,21 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
       "The game is a draw.",
       "Stalemate: the side to move has no legal move but is not in check.\n"
       "The game is a draw.",
-      QString("Unfinished: games still running after %1 half moves. They\n"
-              "are stopped and count neither as a win nor as a draw.")
-          .arg(kMaxPlies),
-      "Average length of a game in half moves. A half move is the move of\n"
-      "one side: \"1. e4 e5\" are two half moves.",
+      QString("Unfinished (too long): games still running after\n"
+              "%1 half moves (%2 moves of each side). They are stopped\n"
+              "and count neither as a win nor as a draw.")
+          .arg(kMaxPlies)
+          .arg(kMaxPlies / 2),
+      "Average length of a game in moves. A move is one move of each\n"
+      "side: \"1. e4 e5\" is one move (two half moves).",
   };
   for (size_t i = 0; i < chips_.size(); ++i) {
     QLabel*& chip = chips_[i];
     chip = new QLabel(this);
     chip->setObjectName(QString("chip%1").arg(i));
     chip->setToolTip(explanations[i]);
+    // Never cut off: the dialog gets wider instead.
+    chip->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     chip->setStyleSheet(
         "background: palette(alternate-base); border-radius: 6px;"
         " padding: 2px 8px; color: palette(placeholder-text);");
@@ -290,10 +297,11 @@ QWidget* SimulationDialog::createTile(Tile& tile, const QString& name,
   return frame;
 }
 
-QGroupBox* SimulationDialog::createChooser(const QString& title,
-                                           const QString& name,
+QGroupBox* SimulationDialog::createChooser(const QString& name,
                                            AiChooser& chooser) {
-  auto* box = new QGroupBox(title, this);
+  auto* box = new QGroupBox(this);
+  box->setObjectName(name + "Group");
+  chooser.box = box;
 
   chooser.ai = new QComboBox(box);
   for (const ai_info& ai : ais_) {
@@ -344,6 +352,12 @@ QGroupBox* SimulationDialog::createChooser(const QString& title,
   layout->addWidget(chooser.seedRow);
   layout->addStretch();
   return box;
+}
+
+void SimulationDialog::updateGroupTitles() {
+  const bool swap = swapColors_->isChecked();
+  first_.box->setTitle(swap ? "First AI" : "First AI (White)");
+  second_.box->setTitle(swap ? "Second AI" : "Second AI (Black)");
 }
 
 const ai_info& SimulationDialog::selectedAi(const AiChooser& chooser) const {
@@ -507,24 +521,41 @@ void SimulationDialog::showVisuals(const match_stats& stats) {
   bar_->setToolTip(QString("Blue: %1 wins. Grey: draws. Hatched: unfinished."
                            " Orange: %2 wins.")
                        .arg(first, second));
-  speed_.caption->setText("Games / s");
-  const double seconds = clock_.isValid() ? clock_.elapsed() / 1000.0 : 0;
-  speed_.value->setText(seconds > 0 && stats.games > 0
-                            ? QString::number(qRound(stats.games / seconds))
-                            : QString("-"));
+  // Time per game: unlike games per second it still says something about
+  // slow AIs (which would all show "0" or "1" games per second).
+  speed_.caption->setText("Time per game");
+  const qint64 ms = clock_.isValid() ? clock_.elapsed() : 0;
+  if (stats.games == 0 || ms == 0) {
+    speed_.value->setText("-");
+  } else if (ms < stats.games) {
+    speed_.value->setText("<1 ms");
+  } else if (ms < 1000LL * stats.games) {
+    speed_.value->setText(
+        QString("%1 ms").arg(qRound64(double(ms) / stats.games)));
+  } else {
+    speed_.value->setText(
+        QString("%1 s").arg(ms / 1000.0 / stats.games, 0, 'f', 1));
+  }
 
-  chips_[0]->setText(
-      QString("repetition %1").arg(stats.draws_by[THREEFOLD_REPETITION]));
-  chips_[1]->setText(
-      QString("50 moves %1").arg(stats.draws_by[FIFTY_MOVE_RULE]));
-  chips_[2]->setText(
-      QString("material %1").arg(stats.draws_by[INSUFFICIENT_MATERIAL]));
-  chips_[3]->setText(QString("stalemate %1").arg(stats.draws_by[STALEMATE]));
-  chips_[4]->setText(QString("unfinished %1").arg(stats.unfinished));
-  chips_[5]->setText(
-      stats.games > 0
-          ? QString("\u00d8 %1 half moves").arg(stats.total_plies / stats.games)
-          : QString("\u00d8 - half moves"));
+  // Why games were drawn or unfinished, in plain words; a reason that did
+  // not happen is not shown.
+  const std::pair<const char*, int> reasons[] = {
+      {"repeated position", stats.draws_by[THREEFOLD_REPETITION]},
+      {"50-move rule", stats.draws_by[FIFTY_MOVE_RULE]},
+      {"too few pieces", stats.draws_by[INSUFFICIENT_MATERIAL]},
+      {"stalemate", stats.draws_by[STALEMATE]},
+      {"unfinished (too long)", stats.unfinished},
+  };
+  for (int i = 0; i < 5; ++i) {
+    chips_[i]->setText(
+        QString("%1 %2").arg(reasons[i].first).arg(reasons[i].second));
+    chips_[i]->setVisible(reasons[i].second > 0);
+  }
+  // In moves (one of each side), rounded up: 41 half moves are 21 moves.
+  chips_[5]->setText(stats.games > 0
+                         ? QString("\u00d8 %1 moves per game")
+                               .arg((stats.total_plies / stats.games + 1) / 2)
+                         : QString("\u00d8 - moves per game"));
 }
 
 void SimulationDialog::showEnd(const match_stats& stats) {

@@ -6,6 +6,7 @@
 
 class ChessBoardWidget;
 class QComboBox;
+class QPushButton;
 class QLabel;
 class QSpinBox;
 class QTableWidget;
@@ -28,7 +29,9 @@ class SidePanel : public QWidget {
     QLabel* name = nullptr;
     QLabel* state = nullptr;
     QLabel* lead = nullptr;
-    QLabel* check = nullptr;      // "Check" while this player is in check
+    QLabel* check = nullptr;  // "Check" while this player is in check
+    // "Next move": AI against AI step by step, on the card of the AI to move.
+    QPushButton* next = nullptr;
     QComboBox* player = nullptr;  // Human or one of the AIs
     QLabel* depthLabel = nullptr;
     QSpinBox* depth = nullptr;  // only for AIs that search

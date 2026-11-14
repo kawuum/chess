@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
+#include <QGroupBox>
 #include <QGuiApplication>
 #include <QLabel>
 #include <QMenu>
@@ -266,7 +267,7 @@ TEST_F(Gui, AiChosenInMenuAnswersAMove) {
 }
 
 TEST_F(Gui, AiSpeedStartsWithWaitForClick) {
-  QAction* wait = ai_speed_action("Wait for click");
+  QAction* wait = ai_speed_action("Step by step (click or Space)");
   ASSERT_NE(wait, nullptr);
   EXPECT_TRUE(wait->isChecked());
 }
@@ -277,18 +278,45 @@ TEST_F(Gui, AiVsAiWaitsForAClick) {
   // human. When it runs out, it must not make a move.
   EXPECT_TRUE(board->isAiMovePending());
   ASSERT_TRUE(QTest::qWaitFor([&] { return !board->isAiMovePending(); }, 5000));
-  EXPECT_EQ(status(), "White to move - click the board for the next move");
+  EXPECT_EQ(status(),
+            "White to move - click the board or press Space for the next move");
   click(4, 4);  // any square
-  EXPECT_EQ(status(), "Black to move - click the board for the next move");
+  EXPECT_EQ(status(),
+            "Black to move - click the board or press Space for the next move");
   // No timer runs: without a click nothing happens (no fixed wait needed).
   EXPECT_FALSE(board->isAiMovePending());
+  EXPECT_TRUE(board->isWaitingForClick());
+}
+
+TEST_F(Gui, SpaceAndTheCardButtonPlayTheNextAiMove) {
+  auto* whiteNext = window.findChild<QPushButton*>("whiteNext");
+  auto* blackNext = window.findChild<QPushButton*>("blackNext");
+  ASSERT_NE(whiteNext, nullptr);
+  ASSERT_NE(blackNext, nullptr);
+  // A human plays: Space does nothing, no button.
+  QTest::keyClick(&window, Qt::Key_Space);
+  EXPECT_EQ(board->moveList().size(), 0);
+  EXPECT_FALSE(whiteNext->isVisible());
+
+  random_ai_for_both();
+  ASSERT_TRUE(
+      QTest::qWaitFor([&] { return board->isWaitingForClick(); }, 5000));
+  // The button sits on the card of the side to move.
+  EXPECT_TRUE(whiteNext->isVisible());
+  EXPECT_FALSE(blackNext->isVisible());
+  QTest::keyClick(&window, Qt::Key_Space);
+  EXPECT_EQ(board->moveList().size(), 1);
+  EXPECT_TRUE(blackNext->isVisible());
+  EXPECT_FALSE(whiteNext->isVisible());
+  QTest::mouseClick(blackNext, Qt::LeftButton);
+  EXPECT_EQ(board->moveList().size(), 2);
   EXPECT_TRUE(board->isWaitingForClick());
 }
 
 TEST_F(Gui, AiVsAiWithDelayPlaysByItself) {
   random_ai_for_both();
   // Chosen while the game waits for a click: it goes on by itself.
-  ai_speed_action("0.3 s per move")->trigger();
+  ai_speed_action("Fast (0.3 s per move)")->trigger();
   EXPECT_TRUE(QTest::qWaitFor(
       [&] { return status().startsWith("Black to move"); }, 2000));
   EXPECT_TRUE(QTest::qWaitFor(
@@ -485,6 +513,57 @@ TEST_F(Gui, SimulationChoosesTheDepthOfSearchingAis) {
 
 // Notes the depth it was created with (from the simulation thread).
 std::atomic<int> noted_depth{0};
+
+TEST_F(Gui, SimulationGroupsNameTheAisAndTheirColor) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 4);
+  ASSERT_NE(dialog, nullptr);
+  auto title = [&](const char* name) {
+    auto* box = dialog->findChild<QGroupBox*>(name);
+    return box ? box->title() : QString("(no group %1)").arg(name);
+  };
+  // Each AI keeps its color: the title says which.
+  EXPECT_EQ(title("firstGroup"), "First AI (White)");
+  EXPECT_EQ(title("secondGroup"), "Second AI (Black)");
+  // The colors swap every game: no color in the title.
+  dialog->findChild<QCheckBox*>("swapColors")->setChecked(true);
+  EXPECT_EQ(title("firstGroup"), "First AI");
+  EXPECT_EQ(title("secondGroup"), "Second AI");
+}
+
+TEST_F(Gui, SimulationLabelsUsePlainWords) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 30);
+  ASSERT_NE(dialog, nullptr);
+  click_button(dialog, "start");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+  auto chip = [&](int i) {
+    return dialog->findChild<QLabel*>(QString("chip%1").arg(i));
+  };
+  const QString words[] = {"repeated position", "50-move rule",
+                           "too few pieces", "stalemate",
+                           "unfinished (too long)"};
+  for (int i = 0; i < 5; ++i) {
+    const QString text = chip(i)->text();
+    EXPECT_TRUE(text.startsWith(words[i])) << text.toStdString();
+    // A reason that never happened is not shown.
+    const int count = text.section(' ', -1).toInt();
+    EXPECT_EQ(chip(i)->isVisible(), count > 0) << text.toStdString();
+  }
+  // The length in moves (one move of each side), not in half moves.
+  const QString text = dialog->resultText();
+  const int plies =
+      text.section("Average length: ", 1).section(' ', 0, 0).toInt();
+  EXPECT_EQ(chip(5)->text(),
+            QString("\u00d8 %1 moves per game").arg((plies + 1) / 2));
+  // The time per game instead of games per second.
+  EXPECT_EQ(dialog->findChild<QWidget*>("speedTile")
+                ->findChildren<QLabel*>()
+                .first()
+                ->text(),
+            "Time per game");
+  const QString time = dialog->findChild<QLabel*>("speedValue")->text();
+  EXPECT_TRUE(time.endsWith(" ms") || time.endsWith(" s"))
+      << time.toStdString();
+}
 
 TEST_F(Gui, SimulationDepthReachesTheAiAndNamesIt) {
   std::vector<ai_info> ais = available_ais();

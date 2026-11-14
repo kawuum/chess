@@ -106,6 +106,15 @@ QWidget* SidePanel::createCard(piece_color color, PlayerCard& card) {
       " border-radius: 6px; padding: 2px 8px;");
   card.check->hide();
 
+  card.next = new QPushButton("Next move", card.frame);
+  card.next->setObjectName(prefix + "Next");
+  card.next->setToolTip(
+      "Plays the next move of this AI. Space or a click on the board does\n"
+      "the same. Options > AI vs AI speed lets the AIs play by themselves.");
+  card.next->hide();
+  connect(card.next, &QPushButton::clicked, board_,
+          [this] { board_->playNextAiMove(); });
+
   auto* text = new QVBoxLayout;
   text->setSpacing(0);
   text->addWidget(card.name);
@@ -135,6 +144,7 @@ QWidget* SidePanel::createCard(piece_color color, PlayerCard& card) {
   top->addWidget(card.marker);
   top->addLayout(text, 1);
   top->addWidget(card.check);
+  top->addWidget(card.next);
   top->addWidget(card.lead);
   auto* choice = new QHBoxLayout;
   choice->setSpacing(6);
@@ -250,7 +260,7 @@ void SidePanel::refreshCard(piece_color color, PlayerCard& card) {
   if (board_->isGameOver()) {
     state = board_->statusText();
   } else if (toMove && board_->isWaitingForClick()) {
-    state = "click the board to go on";
+    state = "waiting for you";
   } else if (toMove && board_->isAiToMove()) {
     state = "thinking...";
   } else if (toMove) {
@@ -265,6 +275,7 @@ void SidePanel::refreshCard(piece_color color, PlayerCard& card) {
   card.lead->setText(QString("+%1").arg(lead));
   card.lead->setVisible(lead > 0);
   card.check->setVisible(toMove && board_->isCheck() && !board_->isGameOver());
+  card.next->setVisible(toMove && board_->isWaitingForClick());
 
   // The side to move gets a frame in the accent color.
   card.frame->setStyleSheet(
