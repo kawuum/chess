@@ -122,6 +122,45 @@ TEST(Match, ColorsAlternateAndEachAiHasItsOwnSeed) {
   );
 }
 
+TEST(Match, EachAiPlaysWithItsDepth) {
+  // AIs that note the depth they were created with ("-" without a depth).
+  std::vector<std::string> created;
+  auto noting = [&created](const std::string& name) {
+    ai_info info{name, [&created, name](engine* e, uint32_t seed) {
+                   created.push_back(name + " -");
+                   return random_ai_info().create(e, seed);
+                 }};
+    info.create_with_depth = [&created, name](engine* e, uint32_t seed,
+                                              int depth) {
+      created.push_back(name + " " + std::to_string(depth));
+      return random_ai_info().create(e, seed);
+    };
+    info.default_depth = 3;
+    info.max_depth = 8;
+    return info;
+  };
+  ai_info first = noting("first");
+  ai_info second = noting("second");
+  match_settings settings;
+  settings.games = 2;
+  settings.max_plies = 2;
+  settings.first_depth = 2;
+  settings.second_depth = 5;
+  play_match(first, second, settings);
+  EXPECT_EQ(
+      created, (std::vector<std::string>{"first 2", "second 5",   // game 0
+                                         "second 5", "first 2"})  // game 1
+  );
+
+  // Depth 0 (the default) creates the AI as it is.
+  created.clear();
+  settings = match_settings{};
+  settings.games = 1;
+  settings.max_plies = 2;
+  play_match(first, second, settings);
+  EXPECT_EQ(created, (std::vector<std::string>{"first -", "second -"}));
+}
+
 TEST(Match, SameSeedsRepeatTheMatch) {
   match_settings settings;
   settings.games = 6;

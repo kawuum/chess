@@ -17,6 +17,8 @@
 #include <QTableWidget>
 #include <QTest>
 #include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -463,6 +465,101 @@ TEST_F(Gui, RandomSeedIsShownAndRepeatsTheSimulation) {
   dialog->findChild<QCheckBox*>("firstRandomSeed")->setChecked(false);
   dialog->findChild<QCheckBox*>("secondRandomSeed")->setChecked(false);
   EXPECT_EQ(run(), first_run);
+}
+
+TEST_F(Gui, SimulationChoosesTheDepthOfSearchingAis) {
+  SimulationDialog* dialog = open_simulation("Random AI", "Random AI", 2);
+  ASSERT_NE(dialog, nullptr);
+  auto* combo = dialog->findChild<QComboBox*>("firstAi");
+  auto* row = dialog->findChild<QWidget*>("firstDepthRow");
+  auto* depth = dialog->findChild<QSpinBox*>("firstDepth");
+  ASSERT_NE(row, nullptr);
+  ASSERT_NE(depth, nullptr);
+  for (const ai_info& ai : available_ais()) {
+    combo->setCurrentText(QString::fromStdString(ai.name));
+    const bool searches = static_cast<bool>(ai.create_with_depth);
+    EXPECT_EQ(row->isVisible(), searches) << ai.name;
+    if (!searches) continue;
+    // Simulations may search deeper than the GUI allows while a user waits.
+    EXPECT_EQ(depth->minimum(), 1) << ai.name;
+    EXPECT_EQ(depth->maximum(), ai.max_depth) << ai.name;
+    EXPECT_EQ(depth->value(), ai.default_depth) << ai.name;
+  }
+}
+
+// Notes the depth it was created with (from the simulation thread).
+std::atomic<int> noted_depth{0};
+
+TEST_F(Gui, SimulationDepthReachesTheAiAndNamesIt) {
+  std::vector<ai_info> ais = available_ais();
+  ai_info noting{"Noting AI", [](engine* e, uint32_t seed) {
+                   noted_depth = -1;
+                   return available_ais()[0].create(e, seed);
+                 }};
+  noting.create_with_depth = [](engine* e, uint32_t seed, int depth) {
+    noted_depth = depth;
+    return available_ais()[0].create(e, seed);
+  };
+  noting.default_depth = 3;
+  noting.max_depth = 6;
+  ais.push_back(noting);
+  SimulationDialog dialog(nullptr, ais);
+  dialog.findChild<QComboBox*>("firstAi")->setCurrentText("Random AI");
+  dialog.findChild<QComboBox*>("secondAi")->setCurrentText("Noting AI");
+  dialog.findChild<QSpinBox*>("secondDepth")->setValue(5);
+  dialog.findChild<QSpinBox*>("games")->setValue(1);
+  click_button(&dialog, "start");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog.isRunning(); }, 30000));
+  EXPECT_EQ(noted_depth, 5);
+  EXPECT_TRUE(dialog.resultText().contains("Noting AI depth 5 (Black) wins:"))
+      << dialog.resultText().toStdString();
+}
+
+// Relative luminance (WCAG) and the contrast of two colors, 1 to 21.
+double luminance(const QColor& c) {
+  auto channel = [](double v) {
+    return v <= 0.03928 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(c.redF()) + 0.7152 * channel(c.greenF()) +
+         0.0722 * channel(c.blueF());
+}
+double contrast(const QColor& a, const QColor& b) {
+  const double la = luminance(a), lb = luminance(b);
+  return (std::max(la, lb) + 0.05) / (std::min(la, lb) + 0.05);
+}
+
+TEST_F(Gui, ResultTilesShowPercentAndTheColorsOfTheBar) {
+  SimulationDialog* dialog = open_simulation("Naive AI", "Random AI", 10);
+  ASSERT_NE(dialog, nullptr);
+  click_button(dialog, "start");
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !dialog->isRunning(); }, 30000));
+  auto label = [&](const QString& name) {
+    auto* l = dialog->findChild<QLabel*>(name);
+    return l ? l->text() : QString("(no label %1)").arg(name);
+  };
+  // The percent under each count, rounded like in the text.
+  for (const char* name : {"firstWins", "draws", "secondWins"}) {
+    const int count = label(QString(name) + "Value").toInt();
+    EXPECT_EQ(label(QString(name) + "Percent"),
+              QString("%1%").arg((100 * count + 5) / 10))
+        << name;
+  }
+  // Each tile is the legend of its part of the bar: it carries its color.
+  // The two AIs differ in brightness too, so they stay apart without color
+  // vision (blue and orange: safe for the common color vision deficiencies).
+  auto color = [&](const char* tile) {
+    QWidget* w = dialog->findChild<QWidget*>(tile);
+    return w ? w->property("legendColor").value<QColor>() : QColor();
+  };
+  const QColor first = color("firstWinsTile");
+  const QColor second = color("secondWinsTile");
+  const QColor draws = color("drawsTile");
+  ASSERT_TRUE(first.isValid());
+  ASSERT_TRUE(second.isValid());
+  ASSERT_TRUE(draws.isValid());
+  EXPECT_GE(contrast(first, second), 2.0);
+  EXPECT_GE(contrast(first, draws), 2.0);
+  EXPECT_FALSE(dialog->findChild<QWidget*>("resultBar")->toolTip().isEmpty());
 }
 
 // An AI with a bug: it always plays a move that is not legal, so the engine

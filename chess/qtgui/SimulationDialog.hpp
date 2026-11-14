@@ -55,34 +55,44 @@ class SimulationDialog : public QDialog {
   void closeEvent(QCloseEvent* event) override;
 
  private:
-  // The controls for one of the two AIs: which AI, and its seed. The seed
-  // row is only shown for an AI that uses random numbers. "Random seed"
-  // draws a new seed at every start (and greys out the field).
+  // The controls for one of the two AIs: which AI, its seed and its search
+  // depth. The seed row is only shown for an AI that uses random numbers,
+  // the depth row only for an AI that searches. "Random seed" draws a new
+  // seed at every start (and greys out the field).
   struct AiChooser {
     QComboBox* ai = nullptr;
     QWidget* seedRow = nullptr;
     QCheckBox* randomSeed = nullptr;
     QSpinBox* seed = nullptr;
+    QWidget* depthRow = nullptr;
+    QSpinBox* depth = nullptr;
   };
   // name: "first" or "second", the start of the object names (for tests).
   QGroupBox* createChooser(const QString& title, const QString& name,
                            AiChooser& chooser);
   const ai_info& selectedAi(const AiChooser& chooser) const;
-  // Shows or hides the seed row to match the selected AI.
-  void updateSeedRow(AiChooser& chooser);
+  // Shows or hides the seed and depth rows to match the selected AI; the
+  // depth starts at the AI's default.
+  void updateRows(AiChooser& chooser);
+  // The depth to play with, 0 for an AI without a depth.
+  int depthFor(const AiChooser& chooser) const;
   // The seed to play with. A random seed is drawn now and written into the
   // field, so the user can see it and play the same games again.
   uint32_t seedFor(AiChooser& chooser);
 
-  // A small card with a caption and a big number, e.g. "Draws" / "57".
+  // A small card with a caption, a big number and its share of the games,
+  // e.g. "Draws" / "57" / "57%". A tile with a color is the legend of its
+  // part of the result bar: a stripe of that color on its left.
   struct Tile {
     QLabel* caption = nullptr;
     QLabel* value = nullptr;
+    QLabel* percent = nullptr;  // only on tiles with a color
   };
   // name: start of the object names (for tests), e.g. "draws".
   // explanation: the tooltip of the tile.
   QWidget* createTile(Tile& tile, const QString& name,
-                      const QString& explanation);
+                      const QString& explanation,
+                      const QColor& color = QColor());
 
   // Called in the GUI thread (queued by the simulation thread).
   void showProgress(const match_stats& stats);

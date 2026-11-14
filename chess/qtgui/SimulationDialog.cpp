@@ -25,13 +25,30 @@ namespace {
 // Seeds the user can type, and the range random seeds are drawn from.
 constexpr int kMaxSeed = 999999999;
 
+// The colors of the results, the same in the light and the dark theme. Blue
+// and orange stay apart for the common color vision deficiencies (red-green
+// and blue-yellow), and they differ in brightness, so even in grey they are
+// two different shades. The percent written in each part and the tiles as a
+// legend say the same again without color.
+const QColor kFirstColor("#0072b2");       // blue
+const QColor kSecondColor("#e69f00");      // orange
+const QColor kDrawColor("#c9c7bd");        // light grey
+const QColor kUnfinishedColor("#e4e2da");  // hatched with kHatchColor
+const QColor kHatchColor("#8a8a85");
+
+// The share of count in games in percent, rounded like describe() does.
+int percentOf(int count, int games) {
+  return games > 0 ? (100 * count + games / 2) / games : 0;
+}
+
 }  // namespace
 
 // The results as one bar: wins of the first AI, draws, unfinished games and
-// wins of the second AI, each as wide as its share of the games played.
+// wins of the second AI, each as wide as its share of the games played, with
+// its percent written inside if there is room.
 class ResultBar : public QWidget {
  public:
-  explicit ResultBar(QWidget* parent) : QWidget(parent) { setFixedHeight(14); }
+  explicit ResultBar(QWidget* parent) : QWidget(parent) { setFixedHeight(22); }
   void setStats(const match_stats& stats) {
     stats_ = stats;
     update();
@@ -43,7 +60,7 @@ class ResultBar : public QWidget {
     painter.setRenderHint(QPainter::Antialiasing);
     const QRectF all = rect();
     QPainterPath rounded;
-    rounded.addRoundedRect(all, height() / 2.0, height() / 2.0);
+    rounded.addRoundedRect(all, 6, 6);
     painter.setClipPath(rounded);
     painter.fillRect(all, palette().alternateBase());  // no games yet
     if (stats_.games == 0) return;
@@ -51,16 +68,37 @@ class ResultBar : public QWidget {
     const struct {
       int count;
       QColor color;
+      QColor text;  // readable on color (contrast at least 4.5:1)
+      bool hatched;
     } parts[] = {
-        {stats_.first_wins, palette().color(QPalette::Highlight)},
-        {stats_.draws, QColor("#b4b2a9")},
-        {stats_.unfinished, palette().color(QPalette::Mid)},
-        {stats_.second_wins, QColor("#d85a30")},
+        {stats_.first_wins, kFirstColor, Qt::white, false},
+        {stats_.draws, kDrawColor, Qt::black, false},
+        {stats_.unfinished, kUnfinishedColor, Qt::black, true},
+        {stats_.second_wins, kSecondColor, Qt::black, false},
     };
+    QFont small = font();
+    small.setBold(true);
+    small.setPointSizeF(small.pointSizeF() * 0.85);
+    painter.setFont(small);
     qreal x = 0;
     for (const auto& part : parts) {
+      if (part.count == 0) continue;
       const qreal w = all.width() * part.count / stats_.games;
-      painter.fillRect(QRectF(x, 0, w, all.height()), part.color);
+      const QRectF segment(x, 0, w, all.height());
+      painter.fillRect(segment, part.color);
+      if (part.hatched) {
+        painter.fillRect(segment, QBrush(kHatchColor, Qt::BDiagPattern));
+      }
+      const QString text =
+          QString("%1%").arg(percentOf(part.count, stats_.games));
+      if (painter.fontMetrics().horizontalAdvance(text) + 8 <= w) {
+        painter.setPen(part.text);
+        painter.drawText(segment, Qt::AlignCenter, text);
+      }
+      // A thin gap in the background color between two parts.
+      if (x > 0) {
+        painter.fillRect(QRectF(x - 1, 0, 2, all.height()), palette().base());
+      }
       x += w;
     }
   }
@@ -125,15 +163,21 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
   // 4. The results, as a card: the bar, four numbers, the draw reasons and
   //    the full text (selectable, e.g. to copy it).
   bar_ = new ResultBar(this);
+  bar_->setObjectName("resultBar");
   auto* tiles = new QHBoxLayout;
   tiles->setSpacing(10);
-  tiles->addWidget(
-      createTile(firstWins_, "firstWins", "Games this AI won by checkmate."));
-  tiles->addWidget(
-      createTile(draws_, "draws",
-                 "Games that ended in a draw. The labels below say why."));
-  tiles->addWidget(
-      createTile(secondWins_, "secondWins", "Games this AI won by checkmate."));
+  tiles->addWidget(createTile(firstWins_, "firstWins",
+                              "Games this AI won by checkmate (blue in the "
+                              "bar above).",
+                              kFirstColor));
+  tiles->addWidget(createTile(draws_, "draws",
+                              "Games that ended in a draw (grey in the bar "
+                              "above). The labels below say why.",
+                              kDrawColor));
+  tiles->addWidget(createTile(secondWins_, "secondWins",
+                              "Games this AI won by checkmate (orange in the "
+                              "bar above).",
+                              kSecondColor));
   tiles->addWidget(
       createTile(speed_, "speed", "Games played per second so far."));
   auto* chipRow = new QHBoxLayout;
@@ -204,13 +248,19 @@ SimulationDialog::SimulationDialog(QWidget* parent, std::vector<ai_info> ais)
 }
 
 QWidget* SimulationDialog::createTile(Tile& tile, const QString& name,
-                                      const QString& explanation) {
+                                      const QString& explanation,
+                                      const QColor& color) {
   auto* frame = new QFrame(this);
   frame->setToolTip(explanation);
   frame->setObjectName(name + "Tile");
+  // A tile with a color is a legend entry: a stripe in that color.
+  const QString stripe =
+      color.isValid() ? QString(" border-left: 5px solid %1;").arg(color.name())
+                      : QString();
   frame->setStyleSheet(QString("#%1 { background: palette(alternate-base);"
-                               " border-radius: 8px; }")
-                           .arg(frame->objectName()));
+                               " border-radius: 8px;%2 }")
+                           .arg(frame->objectName(), stripe));
+  if (color.isValid()) frame->setProperty("legendColor", color);
   tile.caption = new QLabel(frame);
   tile.caption->setStyleSheet("color: palette(placeholder-text);");
   tile.value = new QLabel(frame);
@@ -223,7 +273,20 @@ QWidget* SimulationDialog::createTile(Tile& tile, const QString& name,
   layout->setContentsMargins(10, 8, 10, 8);
   layout->setSpacing(0);
   layout->addWidget(tile.caption);
-  layout->addWidget(tile.value);
+  if (color.isValid()) {
+    // The count and its percent side by side: "57  57%".
+    tile.percent = new QLabel(frame);
+    tile.percent->setObjectName(name + "Percent");
+    tile.percent->setStyleSheet("color: palette(placeholder-text);");
+    auto* row = new QHBoxLayout;
+    row->setSpacing(8);
+    row->addWidget(tile.value);
+    row->addWidget(tile.percent, 0, Qt::AlignBaseline);
+    row->addStretch();
+    layout->addLayout(row);
+  } else {
+    layout->addWidget(tile.value);
+  }
   return frame;
 }
 
@@ -259,12 +322,25 @@ QGroupBox* SimulationDialog::createChooser(const QString& title,
   seedLayout->addWidget(chooser.seed, 1);
   seedLayout->addWidget(chooser.randomSeed);
 
+  chooser.depth = new QSpinBox(box);
+  chooser.depth->setObjectName(name + "Depth");
+  chooser.depth->setToolTip(
+      "How many half moves the AI looks ahead. Each more half move makes\n"
+      "it stronger and takes several times as long.");
+  chooser.depthRow = new QWidget(box);
+  chooser.depthRow->setObjectName(name + "DepthRow");
+  auto* depthLayout = new QHBoxLayout(chooser.depthRow);
+  depthLayout->setContentsMargins(0, 0, 0, 0);
+  depthLayout->addWidget(new QLabel("Depth:", chooser.depthRow));
+  depthLayout->addWidget(chooser.depth, 1);
+
   connect(chooser.ai, &QComboBox::currentIndexChanged, this,
-          [this, &chooser] { updateSeedRow(chooser); });
-  updateSeedRow(chooser);
+          [this, &chooser] { updateRows(chooser); });
+  updateRows(chooser);
 
   auto* layout = new QVBoxLayout(box);
   layout->addWidget(chooser.ai);
+  layout->addWidget(chooser.depthRow);
   layout->addWidget(chooser.seedRow);
   layout->addStretch();
   return box;
@@ -274,8 +350,20 @@ const ai_info& SimulationDialog::selectedAi(const AiChooser& chooser) const {
   return ais_[chooser.ai->currentIndex()];
 }
 
-void SimulationDialog::updateSeedRow(AiChooser& chooser) {
-  chooser.seedRow->setVisible(selectedAi(chooser).uses_random);
+void SimulationDialog::updateRows(AiChooser& chooser) {
+  const ai_info& ai = selectedAi(chooser);
+  chooser.seedRow->setVisible(ai.uses_random);
+  const bool searches = static_cast<bool>(ai.create_with_depth);
+  chooser.depthRow->setVisible(searches);
+  if (searches) {
+    // Simulations may go deeper than the GUI, where a user waits.
+    chooser.depth->setRange(1, ai.max_depth);
+    chooser.depth->setValue(ai.default_depth);
+  }
+}
+
+int SimulationDialog::depthFor(const AiChooser& chooser) const {
+  return selectedAi(chooser).create_with_depth ? chooser.depth->value() : 0;
 }
 
 uint32_t SimulationDialog::seedFor(AiChooser& chooser) {
@@ -308,13 +396,22 @@ void SimulationDialog::start() {
   settings.max_plies = kMaxPlies;
   settings.first_seed = seedFor(first_);
   settings.second_seed = seedFor(second_);
+  settings.first_depth = depthFor(first_);
+  settings.second_depth = depthFor(second_);
 
   settings.swap_colors = swapColors_->isChecked();
 
   // The names in the results. With fixed colors they carry the color; when
   // the colors swap, the same AI twice is numbered instead.
+  // A searching AI carries its depth: "Alpha-Beta AI depth 5".
   firstName_ = first_.ai->currentText();
   secondName_ = second_.ai->currentText();
+  if (settings.first_depth > 0) {
+    firstName_ += QString(" depth %1").arg(settings.first_depth);
+  }
+  if (settings.second_depth > 0) {
+    secondName_ += QString(" depth %1").arg(settings.second_depth);
+  }
   if (!settings.swap_colors) {
     firstName_ += " (White)";
     secondName_ += " (Black)";
@@ -400,6 +497,16 @@ void SimulationDialog::showVisuals(const match_stats& stats) {
   draws_.value->setText(QString::number(stats.draws));
   secondWins_.caption->setText(second + " wins");
   secondWins_.value->setText(QString::number(stats.second_wins));
+  for (auto [tile, count] : {std::pair{&firstWins_, stats.first_wins},
+                             std::pair{&draws_, stats.draws},
+                             std::pair{&secondWins_, stats.second_wins}}) {
+    tile->percent->setText(
+        stats.games > 0 ? QString("%1%").arg(percentOf(count, stats.games))
+                        : QString());
+  }
+  bar_->setToolTip(QString("Blue: %1 wins. Grey: draws. Hatched: unfinished."
+                           " Orange: %2 wins.")
+                       .arg(first, second));
   speed_.caption->setText("Games / s");
   const double seconds = clock_.isValid() ? clock_.elapsed() / 1000.0 : 0;
   speed_.value->setText(seconds > 0 && stats.games > 0
@@ -451,6 +558,7 @@ void SimulationDialog::setRunning(bool running) {
   swapColors_->setEnabled(!running);
   for (AiChooser* chooser : {&first_, &second_}) {
     chooser->ai->setEnabled(!running);
+    chooser->depth->setEnabled(!running);
     chooser->randomSeed->setEnabled(!running);
     chooser->seed->setEnabled(!running && !chooser->randomSeed->isChecked());
   }

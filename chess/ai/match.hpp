@@ -22,10 +22,12 @@ struct game_record {
 /**
  * Plays one game from the start position. Each AI gets its own seed, so the
  * same two seeds always give the same game. The game ends with checkmate, a
- * draw, or after max_plies half moves.
+ * draw, or after max_plies half moves. The depths go to AIs that search
+ * (0 = their default, see create_ai()).
  */
 game_record play_game(const ai_info& white, const ai_info& black,
-                      uint32_t white_seed, uint32_t black_seed, int max_plies);
+                      uint32_t white_seed, uint32_t black_seed, int max_plies,
+                      int white_depth = 0, int black_depth = 0);
 
 /** Results of a match between a first and a second AI. */
 struct match_stats {
@@ -48,6 +50,9 @@ struct match_settings {
   // seeds repeat the whole match.
   uint32_t first_seed = 1;
   uint32_t second_seed = 2;
+  // Search depths for AIs that have one; 0 = the AI's default depth.
+  int first_depth = 0;
+  int second_depth = 0;
   // false: the first AI always plays White. true: the colors swap after
   // every game, so White's advantage of the first move is shared fairly.
   bool swap_colors = true;
