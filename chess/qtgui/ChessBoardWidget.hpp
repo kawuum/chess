@@ -36,6 +36,8 @@ class ChessBoardWidget : public QWidget {
   fen_error tryLoadPosition(const std::string& fen);
   // The current position as a FEN string.
   QString fen() const;
+  // Where square (x, y) is drawn, in widget coordinates (tests click there).
+  QRect squareRect(int x, int y) const;
   // The piece on square (x, y), an invalid piece if the square is empty.
   piece pieceAt(int x, int y);
   // Takes back the last move. Against an AI it takes back the AI's answer
@@ -111,10 +113,12 @@ class ChessBoardWidget : public QWidget {
     int y;
   };
 
-  // Geometry: the board is a square, centered in the widget.
+  // Geometry: the board is a square, centered in the widget together with
+  // the coordinates on its left and below it (labelSpace(): their width and
+  // height).
+  QSize labelSpace() const;
   int squareSize() const;
   QPoint boardOrigin() const;
-  QRect squareRect(int x, int y) const;
   std::optional<Square> squareAt(const QPoint& pos) const;
 
   // Renders the 12 SVG piece images for squares of the given size.

@@ -18,7 +18,6 @@
 #include <QTest>
 #include <algorithm>
 #include <atomic>
-#include <cmath>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -28,6 +27,7 @@
 #include "../qtgui/ChessBoardWidget.hpp"
 #include "../qtgui/MainWindow.hpp"
 #include "../qtgui/SimulationDialog.hpp"
+#include "../qtgui/Theme.hpp"
 
 // Lets GoogleTest print a QString as text when a test fails, instead of its
 // raw bytes. GoogleTest finds this function by name (it must be in the same
@@ -38,13 +38,9 @@ void PrintTo(const QString& s, std::ostream* os) {
 
 namespace {
 
-// Center of a board square in widget coordinates. Same geometry as
-// ChessBoardWidget: square board, centered, white at the bottom.
-QPoint center(QWidget& w, int x, int y) {
-  int s = std::min(w.width(), w.height()) / 8;
-  int ox = (w.width() - 8 * s) / 2;
-  int oy = (w.height() - 8 * s) / 2;
-  return QPoint(ox + x * s + s / 2, oy + (7 - y) * s + s / 2);
+// Center of a board square in widget coordinates.
+QPoint center(ChessBoardWidget& w, int x, int y) {
+  return w.squareRect(x, y).center();
 }
 
 QAction* find_action(QMenu* menu, const QString& text) {
@@ -150,9 +146,9 @@ TEST_F(Gui, PieceImagesAreLoaded) {
   // piece images are drawn, many pixels of e2 differ from e4; if they were
   // missing (e.g. no SVG plugin), both squares would look the same.
   QImage img = board->grab().toImage();
-  const int s = std::min(board->width(), board->height()) / 8;
-  const QPoint e2 = center(*board, 4, 1) - QPoint(s / 2, s / 2);
-  const QPoint e4 = center(*board, 4, 3) - QPoint(s / 2, s / 2);
+  const int s = board->squareRect(0, 0).width();
+  const QPoint e2 = board->squareRect(4, 1).topLeft();
+  const QPoint e4 = board->squareRect(4, 3).topLeft();
   int differing = 0;
   for (int dy = 0; dy < s; ++dy) {
     for (int dx = 0; dx < s; ++dx) {
@@ -515,17 +511,59 @@ TEST_F(Gui, SimulationDepthReachesTheAiAndNamesIt) {
       << dialog.resultText().toStdString();
 }
 
-// Relative luminance (WCAG) and the contrast of two colors, 1 to 21.
-double luminance(const QColor& c) {
-  auto channel = [](double v) {
-    return v <= 0.03928 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * channel(c.redF()) + 0.7152 * channel(c.greenF()) +
-         0.0722 * channel(c.blueF());
+using theme::contrast;
+
+// WCAG 2.1 level AA: text needs a contrast of 4.5:1 to its background,
+// graphics that carry meaning (marks on the board, bars, borders of
+// controls) 3:1. Checked on the colors of both themes, so a change of a
+// color that breaks it shows up here and not only on a screenshot.
+TEST(Theme, ColorsMeetWcagAA) {
+  for (const bool dark : {false, true}) {
+    SCOPED_TRACE(dark ? "dark" : "light");
+    const QPalette p = theme::palette(dark);
+    auto c = [&p](QPalette::ColorRole role) { return p.color(role); };
+    // Text, including the grey "placeholder" text of captions, the status
+    // bar and the move numbers, on every background it is used on.
+    for (auto background :
+         {QPalette::Base, QPalette::Window, QPalette::AlternateBase}) {
+      EXPECT_GE(contrast(c(QPalette::Text), c(background)), 4.5);
+      EXPECT_GE(contrast(c(QPalette::PlaceholderText), c(background)), 4.5)
+          << "background role " << background;
+    }
+    EXPECT_GE(contrast(c(QPalette::WindowText), c(QPalette::Window)), 4.5);
+    EXPECT_GE(contrast(c(QPalette::ButtonText), c(QPalette::Button)), 4.5);
+    EXPECT_GE(contrast(c(QPalette::ToolTipText), c(QPalette::ToolTipBase)),
+              4.5);
+    // The Start button and the selected move: text on the accent color.
+    EXPECT_GE(contrast(c(QPalette::HighlightedText), c(QPalette::Highlight)),
+              4.5);
+    // The accent as a graphic: progress bar, frame of the side to move.
+    EXPECT_GE(contrast(c(QPalette::Highlight), c(QPalette::Base)), 3.0);
+    EXPECT_GE(contrast(c(QPalette::Highlight), c(QPalette::Window)), 3.0);
+  }
+
+  // The board is the same in both themes.
+  const theme::BoardColors b = theme::boardColors();
+  for (const QColor& square : {b.lightSquare, b.darkSquare}) {
+    SCOPED_TRACE(square.name().toStdString());
+    // Targets of the selected piece (dots and rings), drawn translucent.
+    EXPECT_GE(contrast(theme::blend(b.target, square), square), 3.0);
+    // Last move and selected piece: a frame on a tinted square.
+    EXPECT_GE(contrast(b.mark, theme::blend(b.lastMove, square)), 3.0);
+    EXPECT_GE(contrast(b.mark, theme::blend(b.selected, square)), 3.0);
+  }
 }
-double contrast(const QColor& a, const QColor& b) {
-  const double la = luminance(a), lb = luminance(b);
-  return (std::max(la, lb) + 0.05) / (std::min(la, lb) + 0.05);
+
+TEST_F(Gui, CoordinatesStandNextToTheBoard) {
+  // Inside the squares, small letters cannot reach 4.5:1 on both square
+  // colors. Next to the board they stand on the window background in
+  // placeholder text color, which the theme test checks.
+  const QFontMetrics metrics(board->font());
+  const QRect a1 = board->squareRect(0, 0);
+  const QRect a8 = board->squareRect(0, 7);
+  EXPECT_GE(a1.left(), metrics.horizontalAdvance("8"));  // ranks on the left
+  EXPECT_GE(board->height() - a1.bottom(), metrics.height());  // files below
+  EXPECT_GE(a8.top(), 0);
 }
 
 TEST_F(Gui, ResultTilesShowPercentAndTheColorsOfTheBar) {

@@ -13,18 +13,9 @@
 
 #include "../engine/evaluation.hpp"
 #include "../engine/notation.hpp"
+#include "Theme.hpp"
 
 namespace {
-
-// Green and cream, the classic colors of tournament boards.
-const QColor kLightSquare(238, 238, 210);
-const QColor kDarkSquare(118, 150, 86);
-// Translucent layers over the squares.
-const QColor kSelected(255, 255, 80, 150);
-const QColor kLastMove(255, 255, 80, 95);
-const QColor kCheck(230, 40, 40, 220);  // center of the glow
-const QColor kTarget(20, 40, 10, 60);
-const QColor kBoardEdge(0, 0, 0, 60);
 
 constexpr qreal kCornerRadius = 6;  // rounded corners of the board
 constexpr int kSlideMs = 150;       // how long a piece slides to its square
@@ -329,13 +320,24 @@ std::optional<piece_type> ChessBoardWidget::askPromotionPiece() {
 
 // ---------------------------------------------------------------- geometry
 
+QSize ChessBoardWidget::labelSpace() const {
+  const QFontMetrics metrics(font());
+  return QSize(metrics.horizontalAdvance("8") + 8, metrics.height() + 4);
+}
+
 int ChessBoardWidget::squareSize() const {
-  return std::min(width(), height()) / 8;
+  const QSize labels = labelSpace();
+  return std::max(0, std::min(width() - labels.width(),
+                              height() - labels.height())) /
+         8;
 }
 
 QPoint ChessBoardWidget::boardOrigin() const {
-  int side = 8 * squareSize();
-  return QPoint((width() - side) / 2, (height() - side) / 2);
+  // The board with the ranks on its left and the files below it, centered.
+  const QSize labels = labelSpace();
+  const int side = 8 * squareSize();
+  return QPoint((width() - side - labels.width()) / 2 + labels.width(),
+                (height() - side - labels.height()) / 2);
 }
 
 QRect ChessBoardWidget::squareRect(int x, int y) const {
@@ -451,6 +453,8 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
   }
   const QRectF boardRect(boardOrigin(), QSizeF(8 * s, 8 * s));
 
+  const theme::BoardColors& colors = theme::boardColors();
+
   // The board has rounded corners: everything on it is clipped to them.
   QPainterPath rounded;
   rounded.addRoundedRect(boardRect, kCornerRadius, kCornerRadius);
@@ -459,21 +463,28 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
   // 1. Squares. a1 (0, 0) is dark.
   for (int y = 0; y < 8; ++y) {
     for (int x = 0; x < 8; ++x) {
-      painter.fillRect(squareRect(x, y),
-                       (x + y) % 2 == 0 ? kDarkSquare : kLightSquare);
+      painter.fillRect(squareRect(x, y), (x + y) % 2 == 0 ? colors.darkSquare
+                                                          : colors.lightSquare);
     }
   }
 
-  // 2. Highlights: last move, selected piece. The engine stores the last
-  //    move in the previous game state.
+  // 2. Highlights: last move, selected piece, each a tint with a frame.
+  //    The engine stores the last move in the previous game state.
+  const qreal frameWidth = std::max(2.0, s / 22.0);
+  auto mark = [&](int x, int y, const QColor& tint) {
+    const QRectF r = squareRect(x, y);
+    painter.fillRect(r, tint);
+    painter.setPen(QPen(colors.mark, frameWidth));
+    painter.setBrush(Qt::NoBrush);
+    const qreal inset = frameWidth / 2;
+    painter.drawRect(r.adjusted(inset, inset, -inset, -inset));
+  };
   if (gs.prev && gs.prev->performed_move.mover.is_valid()) {
     const ::move& last = gs.prev->performed_move;
-    painter.fillRect(squareRect(last.from_x, last.from_y), kLastMove);
-    painter.fillRect(squareRect(last.to_x, last.to_y), kLastMove);
+    mark(last.from_x, last.from_y, colors.lastMove);
+    mark(last.to_x, last.to_y, colors.lastMove);
   }
-  if (selected_) {
-    painter.fillRect(squareRect(selected_->x, selected_->y), kSelected);
-  }
+  if (selected_) mark(selected_->x, selected_->y, colors.selected);
 
   // 3. King in check: a red glow under the king, strongest in the middle.
   if (gs.is_check) {
@@ -484,29 +495,12 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
             p.get_piece_color() == gs.to_move) {
           QRectF r = squareRect(x, y);
           QRadialGradient glow(r.center(), s * 0.6);
-          glow.setColorAt(0.0, kCheck);
+          glow.setColorAt(0.0, colors.check);
           glow.setColorAt(1.0, Qt::transparent);
           painter.fillRect(r, glow);
         }
       }
     }
-  }
-
-  // 4. Coordinates, in the color of the other square kind: files along the
-  //    bottom row, ranks along the left column.
-  QFont labelFont = painter.font();
-  labelFont.setPixelSize(std::max(9, s / 6));
-  labelFont.setBold(true);
-  painter.setFont(labelFont);
-  for (int i = 0; i < 8; ++i) {
-    QRect file = squareRect(i, 0).adjusted(0, 0, -4, -2);
-    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
-    painter.drawText(file, Qt::AlignRight | Qt::AlignBottom,
-                     QString(QChar('a' + i)));
-    QRect rank = squareRect(0, i).adjusted(4, 2, 0, 0);
-    painter.setPen(i % 2 == 0 ? kLightSquare : kDarkSquare);
-    painter.drawText(rank, Qt::AlignLeft | Qt::AlignTop,
-                     QString::number(i + 1));
   }
 
   // 5. Pieces. A piece that is still sliding is drawn in step 7 instead.
@@ -528,7 +522,7 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
   // 6. Targets of the selected piece: a dot on empty squares, a ring around
   //    pieces that can be captured.
   painter.setPen(Qt::NoPen);
-  painter.setBrush(kTarget);
+  painter.setBrush(colors.target);
   for (::move& m : targets_) {
     QRectF r = squareRect(m.to_x, m.to_y);
     if (b.get_piece(m.to_x, m.to_y).is_valid() || m.type == ENPASSANT) {
@@ -555,8 +549,24 @@ void ChessBoardWidget::paintEvent(QPaintEvent*) {
 
   // 8. A thin edge around the board.
   painter.setClipping(false);
-  painter.setPen(QPen(kBoardEdge, 1.0));
+  painter.setPen(QPen(colors.edge, 1.0));
   painter.setBrush(Qt::NoBrush);
   painter.drawRoundedRect(boardRect.adjusted(0.5, 0.5, -0.5, -0.5),
                           kCornerRadius, kCornerRadius);
+
+  // 9. Coordinates next to the board, on the window background: ranks on
+  //    the left, files below. Inside the squares small letters could not
+  //    reach a contrast of 4.5:1 on both square colors.
+  painter.setFont(font());
+  painter.setPen(palette().color(QPalette::PlaceholderText));
+  const QSize labels = labelSpace();
+  for (int i = 0; i < 8; ++i) {
+    const QRect file = squareRect(i, 0);
+    painter.drawText(QRect(file.left(), file.bottom() + 1, s, labels.height()),
+                     Qt::AlignCenter, QString(QChar('a' + i)));
+    const QRect rank = squareRect(0, i);
+    painter.drawText(
+        QRect(rank.left() - labels.width(), rank.top(), labels.width() - 6, s),
+        Qt::AlignRight | Qt::AlignVCenter, QString::number(i + 1));
+  }
 }
